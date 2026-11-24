@@ -1,0 +1,2174 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wer bin ich? – Online</title>
+  <meta name="description" content="Das Ratespiel „Wer bin ich?“ online mit Freunden spielen – ohne Anmeldung, direkt im Browser.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='6' fill='%23ffe066' stroke='%231d1d1d' stroke-width='6'/><text x='50' y='74' font-size='66' font-weight='900' text-anchor='middle' font-family='Arial Black,sans-serif' fill='%231d1d1d'>?</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Nunito:wght@400;600;700;800&family=Permanent+Marker&display=swap">
+  <style>
+/* Layout-Idee: ein Spieltisch, auf dem jeder Spieler ein bunter Klebezettel ist.
+   Hell = Korkplatte, Dunkel = Filztisch. Zettel sehen in beiden Modi gleich aus. */
+:root {
+  --table: #cfb48a;
+  --table-2: #c4a77a;
+  --grain: rgba(90, 55, 20, .16);
+  --panel: #fffaf0;
+  --panel-line: #e3d2b2;
+  --ink: #2b2118;
+  --ink-soft: #6e5c48;
+  --accent: #e63946;
+  --accent-deep: #a4161a;
+  --on-accent: #ffffff;
+  --good: #2b9348;
+  --bad: #d62828;
+  --idk: #6c757d;
+  --good-soft: #d8f3dc;
+  --bad-soft: #ffe0e0;
+  --field: #ffffff;
+  --shadow: 0 10px 24px rgba(60, 35, 10, .18);
+  --overlay: rgba(30, 20, 10, .5);
+  --note-ink: #2b2118;
+  --tape: rgba(255, 255, 255, .55);
+  --f-display: "Bricolage Grotesque", "Arial Black", system-ui, sans-serif;
+  --f-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-hand: "Permanent Marker", "Comic Sans MS", "Chalkboard SE", cursive;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --table: #1b2a41;
+    --table-2: #15223a;
+    --grain: rgba(255, 255, 255, .045);
+    --panel: #22324d;
+    --panel-line: #33476a;
+    --ink: #f1f3f8;
+    --ink-soft: #a9b4c8;
+    --accent: #ff5d6c;
+    --accent-deep: #c9184a;
+    --good: #52b788;
+    --bad: #ff6b6b;
+    --idk: #8d99ae;
+    --good-soft: #163d2c;
+    --bad-soft: #4a1f26;
+    --field: #1a2840;
+    --shadow: 0 12px 28px rgba(0, 0, 0, .45);
+    --overlay: rgba(0, 0, 0, .65);
+    --tape: rgba(255, 255, 255, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --table: #1b2a41;
+  --table-2: #15223a;
+  --grain: rgba(255, 255, 255, .045);
+  --panel: #22324d;
+  --panel-line: #33476a;
+  --ink: #f1f3f8;
+  --ink-soft: #a9b4c8;
+  --accent: #ff5d6c;
+  --accent-deep: #c9184a;
+  --good: #52b788;
+  --bad: #ff6b6b;
+  --idk: #8d99ae;
+  --good-soft: #163d2c;
+  --bad-soft: #4a1f26;
+  --field: #1a2840;
+  --shadow: 0 12px 28px rgba(0, 0, 0, .45);
+  --overlay: rgba(0, 0, 0, .65);
+  --tape: rgba(255, 255, 255, .35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--f-body);
+  font-size: 16px;
+  color: var(--ink);
+  background-color: var(--table);
+  background-image:
+    radial-gradient(var(--grain) 1px, transparent 1.4px),
+    radial-gradient(var(--grain) 1px, transparent 1.4px),
+    radial-gradient(1200px 700px at 50% -20%, var(--table-2), transparent);
+  background-size: 7px 7px, 11px 11px, 100% 100%;
+  background-position: 0 0, 3px 5px, 0 0;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+main { max-width: 1120px; margin: 0 auto; padding-block: 18px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); margin: 0 0 .5em; line-height: 1.1; text-wrap: balance; letter-spacing: -.01em; }
+h1 { font-size: clamp(2.6rem, 8vw, 4.2rem); font-weight: 800; }
+h2 { font-size: 1.6rem; font-weight: 800; }
+h3 { font-size: 1.1rem; font-weight: 800; }
+.hidden { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--ink-soft); }
+.small { font-size: .86rem; }
+.center { text-align: center; }
+.error { color: var(--bad); min-height: 1em; margin: .5em 0 0; font-weight: 700; }
+.success { color: var(--good); margin: .5em 0 0; font-weight: 700; }
+.hl { font-family: var(--f-hand); font-weight: 400; color: var(--accent); }
+
+/* ---------- Flächen & Bedienelemente ---------- */
+.card {
+  background: var(--panel);
+  border: 2px solid var(--panel-line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+.card.narrow { max-width: 480px; margin-left: auto; margin-right: auto; }
+label { display: block; font-weight: 800; margin: 14px 0 6px; }
+input, select {
+  width: 100%;
+  font: inherit;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 2px solid var(--panel-line);
+  background: var(--field);
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s;
+}
+input:focus, select:focus { border-color: var(--accent); }
+.row { display: flex; gap: 8px; align-items: stretch; }
+.row input { flex: 1; min-width: 0; }
+
+.btn {
+  font: inherit;
+  font-weight: 800;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 9px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s, background .15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 5px 0 var(--ink); }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 var(--ink); }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.accent { background: #ffe066; color: #2b2118; }
+.btn.ghost { box-shadow: none; border-color: var(--panel-line); }
+.btn.ghost:active { transform: none; }
+.btn.ghost-danger { color: var(--bad); }
+.btn.big { width: 100%; padding: 14px; font-size: 1.12rem; margin-top: 14px; font-family: var(--f-display); }
+.btn.small { padding: 6px 12px; font-size: .9rem; box-shadow: 0 3px 0 var(--ink); }
+.pill { background: var(--accent); color: var(--on-accent); border-radius: 99px; padding: 1px 10px; font-size: .82rem; font-family: var(--f-body); vertical-align: middle; }
+.check { display: flex; gap: 10px; align-items: center; font-weight: 700; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+/* ---------- Kopfzeile ---------- */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--panel);
+  border-bottom: 2px solid var(--panel-line);
+}
+.brand { font-family: var(--f-display); font-weight: 800; font-size: 1.1rem; }
+.top-info { display: flex; align-items: center; gap: 6px; font-size: .95rem; }
+.top-info b { letter-spacing: .12em; }
+.top-actions { display: flex; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); display: inline-block; }
+.dot.on { background: var(--good); }
+.icon-btn { background: var(--panel); border: 2px solid var(--panel-line); border-radius: 10px; padding: 5px 9px; cursor: pointer; font-size: 1rem; color: var(--ink); }
+.banner { position: fixed; left: 50%; top: calc(70px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 40; background: var(--bad); color: #fff; padding: 8px 16px; border-radius: 99px; font-weight: 800; box-shadow: var(--shadow); }
+
+/* ---------- Klebezettel (gemeinsame Optik) ---------- */
+.pcard, .lnote, .pod, .hnote {
+  background: var(--note, #ffe066);
+  color: var(--note-ink);
+  border-radius: 3px 3px 22px 3px;
+  box-shadow: 0 14px 18px -10px rgba(0, 0, 0, .5), inset 0 -10px 18px -14px rgba(0, 0, 0, .25);
+  transform: rotate(var(--rot, 0deg));
+  position: relative;
+}
+.pcard::before, .lnote::before, .pod::before {
+  content: ""; position: absolute; top: -11px; left: 50%;
+  width: 72px; height: 22px; transform: translateX(-50%) rotate(-3deg);
+  background: var(--tape); border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+}
+
+/* ---------- Start ---------- */
+.hero { text-align: center; margin: 22px 0 22px; }
+.hero h1 { margin-top: 6px; }
+.sub { color: var(--ink-soft); margin: 0 auto; max-width: 36ch; font-size: 1.08rem; }
+.hero-notes { display: flex; justify-content: center; gap: 16px; height: 120px; align-items: center; }
+.hnote { font-family: var(--f-hand); display: grid; place-items: center; width: 104px; height: 96px; font-size: 1.15rem; padding: 8px; animation: drop .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+.hnote.n1 { --note: #ff9ebb; --rot: -8deg; animation-delay: .05s; }
+.hnote.n2 { --note: #ffe066; --rot: 3deg; width: 118px; height: 110px; font-size: 3.6rem; animation-delay: .18s; }
+.hnote.n3 { --note: #8ce99a; --rot: 7deg; animation-delay: .3s; }
+@keyframes drop { from { opacity: 0; transform: translateY(-30px) rotate(calc(var(--rot) * 3)) scale(1.15); } }
+.or { text-align: center; margin: 20px 0 6px; position: relative; color: var(--ink-soft); font-size: .9rem; }
+.or::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--panel-line); }
+.or span { background: var(--panel); padding: 0 10px; position: relative; }
+.code-input { text-transform: uppercase; letter-spacing: .3em; font-weight: 800; }
+.rules summary { cursor: pointer; font-weight: 800; font-family: var(--f-display); }
+.rules ol { padding-left: 20px; margin-bottom: 0; }
+.rules li { margin: 6px 0; }
+.test-names { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ---------- Lobby ---------- */
+.code-big { font-family: var(--f-hand); font-size: clamp(2.4rem, 9vw, 3.4rem); letter-spacing: .25em; color: var(--accent); margin: 0 0 6px; padding-left: .25em; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+.grid-2 > .card { margin-bottom: 0; min-width: 0; }
+.lnotes { list-style: none; padding: 14px 4px 4px; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 18px 14px; }
+.lnote { padding: 16px 10px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-height: 118px; }
+.lnote-name { font-family: var(--f-hand); font-weight: 400; font-size: 1.15rem; word-break: break-word; line-height: 1.15; }
+.lnote-meta { font-size: .78rem; font-weight: 700; opacity: .75; }
+.lnote.stick { animation: stick .5s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes stick { from { opacity: 0; transform: translateY(-24px) scale(1.25) rotate(calc(var(--rot) * 4)); } }
+.lnote.off, .off { opacity: .45; filter: grayscale(.6); }
+.avatar-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 2px dashed var(--panel-line); }
+.avatar-pick label { margin: 0; }
+.avatar-preview .avatar { width: 48px; height: 48px; font-size: 1.2rem; }
+.plist { list-style: none; padding: 0; margin: 0; }
+.plist li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 2px dashed var(--panel-line); }
+.plist li:last-child { border-bottom: 0; }
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: inline-grid; place-items: center; flex-shrink: 0; overflow: hidden;
+  background: var(--av, #6c757d); color: #fff; font-weight: 800; font-family: var(--f-display);
+  border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Icons */
+.ic { width: 1.2em; height: 1.2em; flex-shrink: 0; vertical-align: -0.24em; display: inline-block; }
+.ic-slot { display: inline-flex; font-style: normal; }
+.icon-btn .ic { width: 1.3em; height: 1.3em; vertical-align: middle; }
+h3 .ic { width: 1.1em; height: 1.1em; color: var(--accent); }
+.rules summary .ic { color: var(--accent); }
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-doodle { width: 34px; height: 34px; display: inline-block; }
+.crown { color: #e0a800; margin-left: 4px; }
+.lnote-meta .ic { color: #b58100; }
+.st .ic { color: var(--ink-soft); }
+.st .ic.ok { color: var(--good); }
+.medal { width: 34px; height: 41px; display: inline-block; vertical-align: middle; }
+.pod .m .medal { width: 46px; height: 55px; }
+.rank .muted .medal { width: 20px; height: 24px; vertical-align: -6px; }
+.toast { display: flex; align-items: center; gap: 8px; }
+.vbtn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.vbtn .ic { width: 1.7em; height: 1.7em; stroke-width: 3; }
+.tally .ic { width: 1.1em; height: 1.1em; }
+.t-yes { color: var(--good); }
+.t-no { color: var(--bad); }
+.notes li .ic, .qa li .ic { width: 1em; height: 1em; }
+.r-yes .ic { color: var(--good); }
+.r-no .ic { color: var(--bad); }
+.qa .r-yes .ic { color: #1b7a38; }
+.qa .r-no .ic { color: #b3261e; }
+.l .ic { width: 1.05em; height: 1.05em; }
+.l.sys { display: flex; gap: 6px; align-items: flex-start; }
+.l.sys .ic { margin-top: .2em; }
+.vb .ic { width: 1em; height: 1em; margin-left: 4px; vertical-align: -0.15em; }
+.turn-banner .ic { width: 1.3em; height: 1.3em; vertical-align: -0.3em; margin-right: 4px; }
+.pc-foot .ic { width: 1em; height: 1em; vertical-align: -0.18em; }
+.pq-title .ic { vertical-align: -0.25em; }
+.doodle { display: block; width: 100%; height: 100%; overflow: visible; }
+.avatar.doodle-av { background: #fffdf6; padding: 3px; }
+.doodle-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; margin-top: 12px; }
+.dpick {
+  font: inherit; font-size: .78rem; font-weight: 800; color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px 6px; border-radius: 12px; cursor: pointer;
+  border: 2px solid var(--panel-line); background: var(--field);
+  transition: transform .12s;
+}
+.dpick svg { width: 54px; height: 54px; }
+.dpick:hover { transform: translateY(-2px) rotate(-3deg); border-color: var(--ink); }
+.dpick.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent); }
+.hnote .doodle { width: 74px; height: 74px; }
+.secret-me { position: relative; width: 96px; height: 96px; margin: 8px auto 0; }
+.secret-me .doodle { animation: ponder 3s ease-in-out infinite; }
+.qmark {
+  position: absolute; right: -14px; top: -10px;
+  font-family: var(--f-hand); font-size: 2.6rem; line-height: 1; color: var(--note-ink);
+  transform: rotate(14deg);
+}
+@keyframes ponder { 50% { transform: rotate(-5deg) translateY(-3px); } }
+.you { background: #2b2118; color: #fff; border-radius: 6px; padding: 0 6px; font-size: .74rem; font-weight: 800; font-family: var(--f-body); }
+#settings-card select { max-width: 260px; }
+
+/* ---------- Figuren vergeben ---------- */
+.assign-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+#fig-input { font-family: var(--f-hand); font-size: 1.3rem; }
+
+/* ---------- Spiel ---------- */
+.turn-banner {
+  padding: 14px 18px; border-radius: var(--radius); margin-bottom: 26px;
+  background: var(--panel); border: 2px solid var(--panel-line); box-shadow: var(--shadow);
+  font-size: 1.08rem; font-weight: 600;
+}
+.turn-banner.mine { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); font-family: var(--f-display); font-size: 1.2rem; }
+.play-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.play-main, .play-side { min-width: 0; }
+.players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 26px 18px; margin-bottom: 26px; padding-top: 6px; }
+.pcard { padding: 20px 14px 14px; min-height: 190px; display: flex; flex-direction: column; transition: transform .25s; }
+.pcard:hover { transform: rotate(0deg) scale(1.02); }
+.pcard.current { outline: 3px dashed var(--accent); outline-offset: 6px; }
+.pcard.me.current { animation: wiggle 4s ease-in-out infinite; }
+@keyframes wiggle {
+  0%, 16%, 100% { transform: rotate(var(--rot)); }
+  4% { transform: rotate(calc(var(--rot) - 4deg)); }
+  8% { transform: rotate(calc(var(--rot) + 4deg)); }
+  12% { transform: rotate(calc(var(--rot) - 2deg)); }
+}
+.pcard.offline { opacity: .5; filter: grayscale(.7); }
+.pcard.flip { animation: flip .8s cubic-bezier(.3, 1.3, .5, 1) both; }
+@keyframes flip { from { transform: perspective(600px) rotateY(180deg) rotate(var(--rot)); } }
+.pc-head { display: flex; align-items: center; gap: 8px; }
+.pc-name { font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sticker {
+  position: absolute; top: -12px; right: -8px; z-index: 2;
+  background: var(--accent); color: #fff; font-weight: 800; font-size: .74rem;
+  padding: 4px 10px; border-radius: 99px; transform: rotate(8deg);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .25);
+}
+.fig-name { font-family: var(--f-hand); font-size: 1.55rem; line-height: 1.15; margin: 14px 0 4px; word-break: break-word; }
+.fig-name.secret { font-size: 3.6rem; line-height: 1; text-align: center; margin: 6px 0 0; opacity: .85; }
+.fig-hint { font-size: .86rem; font-weight: 600; opacity: .75; }
+.pcard .fig-hint:only-of-type { text-align: inherit; }
+.pcard.me .fig-hint { text-align: center; }
+.pc-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 10px; font-size: .84rem; font-weight: 700; opacity: .7; }
+.stamp {
+  align-self: flex-start; margin-top: 8px;
+  font-family: var(--f-display); font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em;
+  border: 2.5px solid currentColor; border-radius: 6px; padding: 2px 8px; transform: rotate(-4deg);
+  color: #555;
+}
+.stamp.good { color: #1b7a38; }
+.pcard details { margin-top: 8px; font-size: .86rem; }
+.pcard summary { cursor: pointer; font-weight: 700; opacity: .8; }
+.qa, .notes { list-style: none; padding: 0; margin: 6px 0 0; }
+.qa li, .notes li { padding: 4px 0; border-bottom: 1px dashed rgba(0, 0, 0, .18); }
+.notes li { border-bottom-color: var(--panel-line); }
+.qa li:last-child, .notes li:last-child { border-bottom: 0; }
+.notes .r-yes { color: var(--good); font-weight: 700; }
+.notes .r-no { color: var(--bad); font-weight: 700; }
+
+/* Frage = Sprechblase */
+.pending { position: relative; border: 3px solid var(--ink); border-radius: 22px; margin-top: 4px; }
+.pending::after {
+  content: ""; position: absolute; left: 44px; top: -16px; width: 26px; height: 26px;
+  background: var(--panel); border-left: 3px solid var(--ink); border-top: 3px solid var(--ink);
+  transform: rotate(45deg); border-radius: 4px 0 0 0;
+}
+.pending.guess { border-style: dashed; }
+.pq-title { color: var(--ink-soft); font-weight: 700; }
+.pq-text { font-family: var(--f-display); font-weight: 800; font-size: clamp(1.4rem, 4vw, 1.9rem); line-height: 1.2; margin: 4px 0 10px; word-break: break-word; }
+.vote-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 14px 0; }
+.vbtn {
+  font: inherit; font-weight: 800; font-size: 1.05rem; padding: 14px 10px; border-radius: 14px; cursor: pointer;
+  border: 2.5px solid var(--ink); color: #fff; box-shadow: 0 5px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s;
+}
+.vbtn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--ink); }
+.vbtn:active, .vbtn.sel { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.vbtn.sel { outline: 3px solid #ffe066; outline-offset: 3px; }
+.v-yes { background: #2b9348; }
+.v-no { background: #d62828; }
+.v-idk { background: #6c757d; }
+.v-unknown { background: var(--panel); color: var(--ink); }
+.tally { display: flex; gap: 14px; flex-wrap: wrap; font-weight: 800; font-size: 1.05rem; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.ask { border: 3px solid var(--accent); }
+.ask label { margin-top: 0; font-family: var(--f-display); font-size: 1.1rem; }
+.tool-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+#guess-box { margin-bottom: 12px; }
+#guess-input { font-family: var(--f-hand); font-size: 1.2rem; }
+
+.log { height: 340px; overflow-y: auto; font-size: .93rem; padding-right: 4px; margin-bottom: 10px; }
+.l { padding: 5px 9px; border-radius: 8px; margin-bottom: 4px; word-break: break-word; }
+.l.sys { color: var(--ink-soft); font-style: italic; }
+.l.q { background: var(--table); color: var(--ink); font-weight: 600; }
+.l.ans { padding-left: 22px; font-weight: 800; }
+.l.ans.r-yes { color: var(--good); }
+.l.ans.r-no { color: var(--bad); }
+.l.ans.r-unclear { color: var(--idk); }
+.l.guess.right { background: var(--good-soft); }
+.l.guess.wrong { background: var(--bad-soft); }
+.l.chat.mine { background: var(--field); }
+
+/* ---------- Ende ---------- */
+.end-title { font-size: clamp(2rem, 6vw, 2.8rem); }
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 18px; margin-top: 26px; flex-wrap: wrap; }
+.pod { padding: 18px 16px 14px; min-width: 130px; max-width: 170px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pod .m { font-size: 2rem; line-height: 1; }
+.pod b { font-family: var(--f-hand); font-weight: 400; font-size: 1.2rem; }
+.pod-fig { font-size: .85rem; font-weight: 700; opacity: .75; word-break: break-word; }
+.pod-pts { font-family: var(--f-display); font-weight: 800; }
+.pod.p1 { padding-top: 34px; padding-bottom: 26px; }
+.rank { padding-left: 0; margin: 0; list-style: none; counter-reset: r; }
+.rank li { padding: 9px 0; border-bottom: 2px dashed var(--panel-line); display: flex; align-items: center; gap: 10px; }
+.rank li:last-child { border-bottom: 0; }
+.rank .avatar { width: 34px; height: 34px; font-size: .9rem; }
+.rank .pts { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* ---------- Testmodus-Leiste ---------- */
+.view-bar {
+  position: sticky; top: calc(56px + env(safe-area-inset-top, 0px)); z-index: 19;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding-block: 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--table-2);
+  border-bottom: 2px solid var(--panel-line);
+}
+.vb-label { font-weight: 800; font-size: .9rem; }
+.vb-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.vb { font: inherit; font-weight: 800; font-size: .92rem; padding: 5px 12px; border-radius: 99px; border: 2px solid var(--ink); background: var(--panel); color: var(--ink); cursor: pointer; }
+.vb.active { background: var(--ink); color: var(--panel); }
+.vb-legend { color: var(--ink-soft); font-size: .8rem; margin-left: auto; }
+
+/* ---------- Bestätigung, Toasts, Konfetti ---------- */
+.modal { position: fixed; inset: 0; z-index: 70; background: var(--overlay); display: grid; place-items: center; padding: 16px; }
+.modal-box { background: var(--panel); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; padding: 22px; max-width: 400px; width: 100%; box-shadow: 0 8px 0 var(--ink); }
+.modal-box p { margin: 0 0 18px; font-size: 1.08rem; font-weight: 700; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+#toasts { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; gap: 8px; align-items: center; width: calc(100% - 32px); max-width: 420px; pointer-events: none; }
+.toast { background: var(--ink); color: var(--panel); padding: 10px 16px; border-radius: 12px; font-weight: 800; box-shadow: var(--shadow); animation: tin .25s ease-out; text-align: center; }
+.toast.error { background: var(--bad); color: #fff; }
+.toast.good { background: var(--good); color: #fff; }
+@keyframes tin { from { opacity: 0; transform: translateY(10px); } }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.cf { position: absolute; top: -20px; width: 12px; height: 12px; border-radius: 1px 1px 5px 1px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  #confetti { display: none; }
+}
+
+/* ---------- Handy ---------- */
+@media (max-width: 860px) {
+  .play-layout { grid-template-columns: 1fr; }
+  .log { height: 260px; }
+}
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .players-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px 14px; }
+  .pcard { min-height: 170px; }
+  .fig-name { font-size: 1.3rem; }
+  .brand span:not(.brand-doodle) { display: none; }
+  .row { flex-wrap: wrap; }
+  .row .btn { flex: 1; }
+  .vb-legend { margin-left: 0; width: 100%; }
+  .hero-notes { height: 100px; gap: 10px; }
+  .hnote { width: 86px; height: 80px; font-size: 1rem; }
+  .hnote.n2 { width: 98px; height: 92px; font-size: 3rem; }
+}
+
+</style>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+</head>
+<body>
+  <div id="conn-banner" class="banner hidden"><i class="ic-slot" data-icon="plug"></i> Verbindung unterbrochen – verbinde neu …</div>
+
+  <header id="topbar" class="topbar hidden">
+    <div class="brand"><span class="brand-doodle" data-doodle="blobbi" data-mood="question"></span><span>Wer bin ich?</span></div>
+    <div class="top-info"><span class="dot" id="conn-dot"></span><span id="top-label">Raum</span> <b id="top-code"></b></div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-sound" title="Ton an/aus" aria-label="Ton an/aus"></button>
+      <button class="icon-btn" id="btn-leave" title="Raum verlassen" aria-label="Raum verlassen"><i class="ic-slot" data-icon="door"></i></button>
+    </div>
+  </header>
+  <nav id="view-bar" class="view-bar hidden" aria-label="Ansicht wechseln">
+    <span class="vb-label"><i class="ic-slot" data-icon="eye"></i> Ansicht von:</span>
+    <div id="view-buttons" class="vb-buttons"></div>
+    <span class="vb-legend"><i class="ic-slot" data-icon="target"></i> am Zug · <i class="ic-slot" data-icon="ballot"></i> soll abstimmen · <i class="ic-slot" data-icon="pencil"></i> muss Figur vergeben</span>
+  </nav>
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn">Abbrechen</button>
+        <button id="modal-ok" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- ================= START ================= -->
+    <section id="screen-start" class="screen">
+      <div class="hero">
+        <div class="hero-notes" aria-hidden="true">
+          <span class="hnote n1" data-doodle="blobbi" data-mood="happy"></span>
+          <span class="hnote n2">?</span>
+          <span class="hnote n3" data-doodle="buh" data-mood="question"></span>
+        </div>
+        <h1>Wer bin ich?</h1>
+        <p class="sub">Klebezettel auf die Stirn – nur online. Für deine Freunde, ohne Anmeldung.</p>
+      </div>
+      <div class="card narrow">
+        <div id="online-area">
+          <label for="name">Dein Name</label>
+          <input id="name" maxlength="20" placeholder="z. B. Max" autocomplete="nickname">
+          <div id="create-area">
+            <button id="btn-create" class="btn primary big"><i class="ic-slot" data-icon="sparkle"></i> Neuen Raum erstellen</button>
+            <div class="or"><span>oder einem Raum beitreten</span></div>
+          </div>
+          <label for="code">Raum-Code</label>
+          <div class="row">
+            <input id="code" class="code-input" maxlength="5" placeholder="ABCDE" autocapitalize="characters" autocomplete="off">
+            <button id="btn-join" class="btn">Beitreten</button>
+          </div>
+          <div class="or"><span>oder erst mal allein ausprobieren</span></div>
+          <button id="btn-test" class="btn big"><i class="ic-slot" data-icon="flask"></i> Testmodus (ein Gerät)</button>
+        </div>
+        <div id="test-setup" class="hidden">
+          <h3><i class="ic-slot" data-icon="flask"></i> Testmodus</h3>
+          <p id="test-note" class="muted small">Alle spielen an diesem Gerät. Über die Leiste oben wechselst du zwischen den Ansichten der Spieler.</p>
+          <label for="tn-1">Spielernamen (2–4)</label>
+          <div class="test-names">
+            <input id="tn-1" maxlength="20" value="Anna" aria-label="Spieler 1">
+            <input id="tn-2" maxlength="20" value="Ben" aria-label="Spieler 2">
+            <input id="tn-3" maxlength="20" value="Clara" aria-label="Spieler 3">
+            <input id="tn-4" maxlength="20" placeholder="(optional)" aria-label="Spieler 4">
+          </div>
+          <button id="btn-test-start" class="btn primary big">Testspiel starten</button>
+        </div>
+        <p id="start-error" class="error"></p>
+        <p id="start-status" class="muted"></p>
+      </div>
+      <details class="card narrow rules">
+        <summary><i class="ic-slot" data-icon="book"></i> So funktioniert's</summary>
+        <ol>
+          <li>Einer erstellt einen Raum und schickt den Link an die anderen.</li>
+          <li>Jeder schreibt für einen Mitspieler eine geheime Figur auf.</li>
+          <li>Du siehst die Figuren aller anderen, nur deine eigene nicht.</li>
+          <li>Wer dran ist, stellt eine Ja/Nein-Frage. Die anderen stimmen per Knopf ab.</li>
+          <li>Glaubst du, es zu wissen? Drück <b>„Ich weiß es!“</b>. Wenige Fragen = viele Punkte.</li>
+        </ol>
+      </details>
+    </section>
+
+    <!-- ================= LOBBY ================= -->
+    <section id="screen-lobby" class="screen hidden">
+      <div class="card center" id="share-card">
+        <p class="muted">Raum-Code</p>
+        <div class="code-big" id="lobby-code"></div>
+        <p class="muted">Schick deinen Freunden diesen Link:</p>
+        <div class="row">
+          <input id="share-link" readonly>
+          <button id="btn-copy" class="btn"><i class="ic-slot" data-icon="copy"></i> Kopieren</button>
+          <button id="btn-share" class="btn hidden"><i class="ic-slot" data-icon="share"></i> Teilen</button>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Spieler <span id="lobby-count" class="pill"></span></h3>
+          <ul id="lobby-players" class="lnotes"></ul>
+          <div class="avatar-pick">
+            <span id="my-avatar-preview" class="avatar-preview"></span>
+            <label for="avatar-file" class="btn small" id="avatar-label"><i class="ic-slot" data-icon="camera"></i> Foto wählen</label>
+            <input type="file" id="avatar-file" accept="image/*" class="visually-hidden">
+            <button id="btn-doodle" class="btn small"><i class="ic-slot" data-icon="palette"></i> Figur wählen</button>
+            <button id="btn-avatar-remove" class="btn small ghost hidden">Foto entfernen</button>
+          </div>
+          <div id="doodle-picker" class="doodle-picker hidden" role="listbox" aria-label="Kritzel-Figur wählen"></div>
+          <p class="muted small">Dein Bild oder deine Figur sehen alle Mitspieler neben deinem Namen.</p>
+        </div>
+        <div class="card" id="settings-card">
+          <h3>Einstellungen <span id="settings-note" class="muted small"></span></h3>
+          <p class="muted small"><i class="ic-slot" data-icon="pencil"></i> Jeder schreibt für einen Mitspieler eine geheime Figur auf.</p>
+          <label class="check"><input type="checkbox" id="set-continue"> Bei „Ja“ darf man weiterfragen</label>
+          <label for="set-limit">Fragen-Limit pro Spieler</label>
+          <select id="set-limit">
+            <option value="0">Kein Limit</option>
+            <option value="10">10 Fragen</option>
+            <option value="15">15 Fragen</option>
+            <option value="20">20 Fragen</option>
+            <option value="30">30 Fragen</option>
+          </select>
+        </div>
+      </div>
+      <div class="card center">
+        <button id="btn-start" class="btn primary big"><i class="ic-slot" data-icon="rocket"></i> Spiel starten</button>
+        <p id="lobby-wait" class="muted"></p>
+      </div>
+    </section>
+
+    <!-- ================= FIGUREN VERGEBEN ================= -->
+    <section id="screen-assign" class="screen hidden">
+      <div class="card">
+        <h2>Gib <span id="assign-target" class="hl"></span> eine Figur!</h2>
+        <p class="muted" id="assign-sub"></p>
+        <div id="assign-write-mode">
+          <label for="fig-input">Figur</label>
+          <input id="fig-input" maxlength="60" placeholder="z. B. SpongeBob, Mein Mathelehrer …" autocomplete="off">
+        </div>
+        <div class="assign-footer">
+          <button id="btn-assign" class="btn primary"><i class="ic-slot" data-icon="check"></i> Figur festlegen</button>
+        </div>
+        <p id="assign-error" class="error"></p>
+        <p id="assign-done" class="success"></p>
+      </div>
+      <div class="card">
+        <h3>Fortschritt</h3>
+        <ul id="assign-status" class="plist"></ul>
+        <button id="btn-fill" class="btn small hidden"><i class="ic-slot" data-icon="dice"></i> Fehlende Figuren zufällig vergeben</button>
+      </div>
+    </section>
+
+    <!-- ================= SPIEL ================= -->
+    <section id="screen-play" class="screen hidden">
+      <div id="turn-banner" class="turn-banner"></div>
+      <div class="play-layout">
+        <div class="play-main">
+          <div id="players-grid" class="players-grid"></div>
+          <div id="pending-q" class="card pending hidden"></div>
+          <div id="pending-g" class="card pending guess hidden"></div>
+          <div id="ask-box" class="card ask hidden">
+            <label for="q-input">Deine Ja/Nein-Frage über deine Figur:</label>
+            <div class="row">
+              <input id="q-input" maxlength="160" placeholder="z. B. Bin ich ein Mensch?" autocomplete="off">
+              <button id="btn-ask" class="btn primary">Fragen</button>
+            </div>
+            <p id="ask-info" class="muted small"></p>
+          </div>
+          <div id="tools" class="card tools">
+            <div id="guess-box" class="row hidden">
+              <input id="guess-input" maxlength="60" placeholder="Wer bist du?" autocomplete="off">
+              <button id="btn-guess-send" class="btn primary">Raten</button>
+            </div>
+            <div class="tool-buttons">
+              <button id="btn-guess" class="btn accent"><i class="ic-slot" data-icon="idea"></i> Ich weiß es!</button>
+              <button id="btn-pass" class="btn"><i class="ic-slot" data-icon="skip"></i> Passen</button>
+              <button id="btn-giveup" class="btn ghost-danger"><i class="ic-slot" data-icon="flag"></i> Aufgeben</button>
+              <button id="btn-skip" class="btn small hidden"></button>
+            </div>
+            <p id="tools-info" class="muted small"></p>
+          </div>
+        </div>
+        <aside class="play-side">
+          <div class="card">
+            <h3><i class="ic-slot" data-icon="notes"></i> Meine Notizen</h3>
+            <ul id="my-notes" class="notes"></ul>
+          </div>
+          <div class="card chat">
+            <h3><i class="ic-slot" data-icon="chat"></i> Verlauf & Chat</h3>
+            <div id="log" class="log"></div>
+            <div class="row">
+              <input id="chat-input" maxlength="200" placeholder="Nachricht …" autocomplete="off">
+              <button id="btn-chat" class="btn">Senden</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= ENDE ================= -->
+    <section id="screen-end" class="screen hidden">
+      <div class="card center">
+        <h2 class="end-title">Runde vorbei!</h2>
+        <div id="podium" class="podium"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><h3>Diese Runde</h3><ol id="end-round" class="rank rich"></ol></div>
+        <div class="card"><h3>Gesamtpunkte</h3><ol id="end-total" class="rank rich"></ol></div>
+      </div>
+      <div class="card center">
+        <button id="btn-new-round" class="btn primary big"><i class="ic-slot" data-icon="refresh"></i> Neue Runde</button>
+        <p id="end-wait" class="muted"></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toasts"></div>
+  <div id="confetti"></div>
+  <script>
+/* ===== figures.js ===== */
+/* Figurenliste für den Modus „Aus Liste auswählen“.
+   Format: 'Name|Alias1|Alias2' – Aliase zählen beim Raten ebenfalls als richtig.
+   Einfach erweitern: neue Einträge in eine Kategorie schreiben. */
+const FIGURE_CATEGORIES = [
+  { name: 'Film & Serien', emoji: '🎬', items: [
+    'Harry Potter', 'Hermine Granger|Hermine|Hermione', 'Ron Weasley', 'Darth Vader', 'Yoda', 'Shrek',
+    'Jack Sparrow|Captain Jack Sparrow', 'James Bond|007', 'Sherlock Holmes', 'Gandalf', 'Frodo', 'Gollum',
+    'Elsa', 'Simba', 'Nemo', 'Indiana Jones', 'Forrest Gump', 'Mr. Bean|Mister Bean', 'Barbie',
+    'Wednesday Addams|Wednesday', 'Eleven|Elfi', 'Willy Wonka', 'E.T.|ET', 'King Kong', 'Godzilla', 'Terminator'
+  ]},
+  { name: 'Superhelden & Schurken', emoji: '🦸', items: [
+    'Spider-Man|Spiderman|Spidey|Peter Parker', 'Batman|Bruce Wayne', 'Superman|Clark Kent', 'Wonder Woman',
+    'Iron Man|Ironman|Tony Stark', 'Hulk', 'Thor', 'Captain America', 'Black Widow', 'Deadpool', 'Wolverine',
+    'Joker', 'Catwoman', 'Black Panther', 'Thanos', 'Groot', 'Loki', 'Harley Quinn'
+  ]},
+  { name: 'Cartoon & Anime', emoji: '📺', items: [
+    'SpongeBob|Spongebob Schwammkopf', 'Patrick Star|Patrick', 'Micky Maus|Mickey Mouse|Mickey Maus', 'Donald Duck',
+    'Homer Simpson|Homer', 'Bart Simpson|Bart', 'Pikachu', 'Son Goku|Goku', 'Naruto', 'Bugs Bunny', 'Scooby-Doo|Scooby Doo',
+    'Garfield', 'Peppa Wutz|Peppa Pig|Peppa', 'Biene Maja|Maja', 'Pumuckl', 'Die Maus|Maus aus der Sendung mit der Maus',
+    'Benjamin Blümchen', 'Asterix', 'Obelix', 'Lucky Luke', 'Schlumpfine', 'Olaf', 'Stitch', 'Minion|Minions'
+  ]},
+  { name: 'Games', emoji: '🎮', items: [
+    'Super Mario|Mario', 'Luigi', 'Prinzessin Peach|Peach', 'Bowser', 'Sonic', 'Link', 'Zelda|Prinzessin Zelda',
+    'Lara Croft', 'Pac-Man|Pacman', 'Steve aus Minecraft|Steve|Minecraft Steve', 'Creeper', 'Kirby', 'Donkey Kong',
+    'Master Chief', 'Yoshi', 'Among-Us-Crewmate|Crewmate|Among Us'
+  ]},
+  { name: 'Berühmte Personen', emoji: '🌟', items: [
+    'Taylor Swift', 'Cristiano Ronaldo|Ronaldo|CR7', 'Lionel Messi|Messi', 'Albert Einstein|Einstein',
+    'Angela Merkel|Merkel', 'Elon Musk', 'Michael Jackson', 'Beyoncé|Beyonce', 'Ed Sheeran', 'Billie Eilish',
+    'Helene Fischer', 'Heidi Klum', 'Barack Obama|Obama', 'Queen Elizabeth II.|Queen Elizabeth|Elizabeth II',
+    'Wolfgang Amadeus Mozart|Mozart', 'Leonardo da Vinci|Da Vinci', 'Kleopatra|Cleopatra', 'Napoleon|Napoleon Bonaparte',
+    'Marilyn Monroe', 'Elvis Presley|Elvis', 'Dwayne Johnson|The Rock', 'Usain Bolt', 'Kim Kardashian', 'Bill Gates'
+  ]},
+  { name: 'Märchen & Sagen', emoji: '🧚', items: [
+    'Rotkäppchen', 'Schneewittchen', 'Aschenputtel|Cinderella', 'Rapunzel', 'Hänsel', 'Gretel',
+    'Weihnachtsmann|Santa Claus|Nikolaus', 'Osterhase', 'Zahnfee', 'Pinocchio', 'Peter Pan', 'Rumpelstilzchen',
+    'Dracula|Graf Dracula', 'Frankensteins Monster|Frankenstein', 'Robin Hood', 'König Artus', 'Merlin', 'Medusa',
+    'Herkules|Herakles', 'Aladdin', 'Dschinni|Flaschengeist', 'Tinkerbell|Tinker Bell'
+  ]},
+  { name: 'Tiere', emoji: '🐾', items: [
+    'Elefant', 'Giraffe', 'Pinguin', 'Löwe', 'Hai', 'Krake|Oktopus', 'Faultier', 'Känguru', 'Koala', 'Eisbär',
+    'Delfin', 'Fledermaus', 'Chamäleon', 'Flamingo', 'Schnecke', 'Ameise', 'Igel', 'Papagei', 'Kuh', 'Einhorn',
+    'Dinosaurier|T-Rex', 'Drache'
+  ]},
+  { name: 'Berufe', emoji: '👷', items: [
+    'Feuerwehrmann|Feuerwehrfrau', 'Polizist|Polizistin', 'Ärztin|Arzt', 'Astronaut|Astronautin', 'Pilot|Pilotin',
+    'Koch|Köchin', 'Lehrer|Lehrerin', 'Bäcker|Bäckerin', 'Tierarzt|Tierärztin', 'Zauberer', 'Pirat', 'Ritter',
+    'Detektiv', 'Clown', 'Friseur|Friseurin', 'YouTuber|Youtuberin', 'Bauer|Bäuerin|Landwirt', 'Postbote|Briefträger'
+  ]},
+  { name: 'Dinge & Essen', emoji: '🍕', items: [
+    'Pizza', 'Banane', 'Smartphone|Handy', 'Klopapier|Toilettenpapier', 'Eiffelturm', 'Kühlschrank', 'Fahrrad',
+    'Regenschirm', 'Zahnbürste', 'Gummibärchen', 'Döner', 'Brezel', 'Sonne', 'Mond', 'Schneemann', 'Kaktus'
+  ]}
+];
+
+  </script>
+  <script>
+/* ===== doodles.js ===== */
+/* Kritzel-Figuren: eigene, handgezeichnet wirkende Wesen als SVG.
+   doodleSvg(id, mood) liefert ein <svg>; mood = 'normal' | 'question' | 'happy'. */
+(function () {
+  const INK = '#1d1d1d';
+
+  // Gesicht: Augen, Bäckchen, Mund – je nach Stimmung
+  function face(x, y, s, mood) {
+    const ex = 10 * s, ey = y - 4 * s, er = 7 * s, pr = 3.4 * s;
+    let eyes, mouth, extra = '';
+    if (mood === 'happy') {
+      eyes = [-1, 1].map(d => `<path d="M${x + d * ex - 6 * s} ${ey + 2 * s} Q${x + d * ex} ${ey - 7 * s} ${x + d * ex + 6 * s} ${ey + 2 * s}" fill="none" stroke="${INK}" stroke-width="${3.6 * s}" stroke-linecap="round"/>`).join('');
+      mouth = `<path d="M${x - 11 * s} ${y + 6 * s} Q${x} ${y + 24 * s} ${x + 11 * s} ${y + 6 * s} Z" fill="${INK}" stroke="${INK}" stroke-width="${2.5 * s}" stroke-linejoin="round"/>` +
+        `<path d="M${x - 5 * s} ${y + 14 * s} Q${x} ${y + 10 * s} ${x + 5 * s} ${y + 14 * s} Q${x} ${y + 18 * s} ${x - 5 * s} ${y + 14 * s} Z" fill="#ff6b81"/>`;
+    } else {
+      const py = mood === 'question' ? -2.6 * s : 0.6 * s;
+      const px = mood === 'question' ? 1.6 * s : 0;
+      eyes = [-1, 1].map(d => `<circle cx="${x + d * ex}" cy="${ey}" r="${er}" fill="#fff" stroke="${INK}" stroke-width="${2.6 * s}"/>` +
+        `<circle cx="${x + d * ex + px}" cy="${ey + py}" r="${pr}" fill="${INK}"/>`).join('');
+      if (mood === 'question') {
+        mouth = `<path d="M${x - 5 * s} ${y + 11 * s} Q${x - 1 * s} ${y + 7 * s} ${x + 3 * s} ${y + 11 * s} T${x + 9 * s} ${y + 10 * s}" fill="none" stroke="${INK}" stroke-width="${3 * s}" stroke-linecap="round"/>`;
+        extra = `<path d="M${x + ex - 7 * s} ${ey - 11 * s} L${x + ex + 6 * s} ${ey - 14 * s}" stroke="${INK}" stroke-width="${3 * s}" stroke-linecap="round"/>`;
+      } else {
+        mouth = `<path d="M${x - 7 * s} ${y + 8 * s} Q${x} ${y + 15 * s} ${x + 7 * s} ${y + 8 * s}" fill="none" stroke="${INK}" stroke-width="${3.2 * s}" stroke-linecap="round"/>`;
+      }
+    }
+    const cheeks = [-1, 1].map(d => `<ellipse cx="${x + d * 17 * s}" cy="${y + 6 * s}" rx="${4.5 * s}" ry="${2.8 * s}" fill="#ff6b81" opacity=".45"/>`).join('');
+    return cheeks + eyes + mouth + extra;
+  }
+
+  // Jede Figur: Körper (SVG-Formen) + Position/Größe des Gesichts
+  const LIST = [
+    { id: 'blobbi', name: 'Blobbi', color: '#ff9ebb', f: [50, 54, 1],
+      body: c => `<path d="M50 12 C76 9 91 31 88 56 C85 80 69 91 47 88 C24 86 9 71 12 49 C15 27 29 14 50 12 Z" fill="${c}"/>` },
+    { id: 'wuerfel', name: 'Würfel', color: '#fff3b0', f: [50, 56, .95],
+      body: c => `<rect x="17" y="18" width="66" height="66" rx="13" fill="${c}" transform="rotate(-6 50 51)"/>` +
+        `<circle cx="29" cy="30" r="4" fill="${'#1d1d1d'}" stroke="none"/><circle cx="72" cy="72" r="4" fill="#1d1d1d" stroke="none"/>` },
+    { id: 'pilzi', name: 'Pilzi', color: '#ff6b6b', f: [50, 70, .72],
+      body: c => `<rect x="32" y="48" width="36" height="40" rx="12" fill="#fff1dc"/>` +
+        `<path d="M12 54 C10 24 90 22 88 54 C70 60 30 60 12 54 Z" fill="${c}"/>` +
+        `<circle cx="34" cy="38" r="6" fill="#fff" stroke="none"/><circle cx="60" cy="32" r="5" fill="#fff" stroke="none"/><circle cx="74" cy="46" r="3.5" fill="#fff" stroke="none"/>` },
+    { id: 'buh', name: 'Buh', color: '#f1f3f8', f: [50, 48, 1],
+      body: c => `<path d="M22 90 L22 46 C22 18 78 18 78 46 L78 90 L69 82 L60 90 L50 82 L40 90 L31 82 Z" fill="${c}"/>` },
+    { id: 'pieks', name: 'Pieks', color: '#8ce99a', f: [50, 42, .72],
+      body: c => `<path d="M36 62 L25 62 C18 62 17 56 17 50 L17 40 C17 34 25 34 25 40 L25 54 L36 54 Z" fill="${c}"/>` +
+        `<path d="M64 52 L75 52 L75 32 C75 26 83 26 83 32 L83 48 C83 57 79 60 72 60 L64 60 Z" fill="${c}"/>` +
+        `<rect x="35" y="16" width="30" height="76" rx="15" fill="${c}"/>` +
+        `<path d="M42 70 l2 4 M56 76 l-2 4 M44 84 l3 2" stroke-width="3"/>` },
+    { id: 'wolki', name: 'Wolki', color: '#b6e3ff', f: [50, 57, .95],
+      body: c => `<path d="M27 76 C12 76 8 57 21 51 C18 34 37 27 46 36 C52 21 77 23 77 42 C92 42 94 66 81 72 C79 78 70 78 66 76 Z" fill="${c}"/>` },
+    { id: 'eggi', name: 'Eggi', color: '#ffd6a5', f: [50, 58, 1],
+      body: c => `<path d="M50 13 C70 13 82 40 82 60 C82 80 68 91 50 91 C32 91 18 80 18 60 C18 40 30 13 50 13 Z" fill="${c}"/>` },
+    { id: 'sternchen', name: 'Sternchen', color: '#ffe066', f: [50, 55, .68],
+      body: c => `<path d="M50 9 L61 36 L90 38 L67 56 L75 85 L50 69 L25 85 L33 56 L10 38 L39 36 Z" fill="${c}"/>` },
+    { id: 'mieze', name: 'Mieze', color: '#c3b1ff', f: [50, 58, .95],
+      body: c => `<path d="M22 44 L27 12 L46 30 Z" fill="${c}"/><path d="M78 44 L73 12 L54 30 Z" fill="${c}"/>` +
+        `<ellipse cx="50" cy="57" rx="35" ry="31" fill="${c}"/>` +
+        `<path d="M14 60 L2 57 M14 66 L3 68 M86 60 L98 57 M86 66 L97 68" stroke-width="3"/>` },
+    { id: 'toasti', name: 'Toasti', color: '#f4c27a', f: [50, 60, .92],
+      body: c => `<path d="M22 42 C12 27 30 13 50 15 C70 13 88 27 78 42 L78 84 C78 89 74 91 70 91 L30 91 C26 91 22 89 22 84 Z" fill="${c}"/>` +
+        `<path d="M29 44 C24 34 36 25 50 26 C64 25 76 34 71 44 L71 82 L29 82 Z" fill="#ffe9c2" stroke="none"/>` },
+    { id: 'tropf', name: 'Tropf', color: '#8fd0ff', f: [50, 66, .9],
+      body: c => `<path d="M50 9 C62 31 83 49 83 66 C83 84 68 92 50 92 C32 92 17 84 17 66 C17 49 38 31 50 9 Z" fill="${c}"/>` +
+        `<path d="M30 64 C30 56 34 50 38 46" fill="none" stroke="#fff" stroke-width="4"/>` },
+    { id: 'planeto', name: 'Planeto', color: '#ffb366', f: [50, 52, .82],
+      body: c => `<path d="M12 62 C4 70 30 74 56 66 C82 58 98 46 88 40" fill="none" stroke-width="5"/>` +
+        `<circle cx="50" cy="52" r="29" fill="${c}"/>` +
+        `<path d="M21 60 C32 66 64 62 82 49" fill="none" stroke-width="5"/>` },
+    { id: 'donutti', name: 'Donutti', color: '#f4c27a', f: [50, 63, .72],
+      body: c => `<path d="M15 54 a35 33 0 1 0 70 0 a35 33 0 1 0 -70 0 Z M43 35 a7 6 0 1 0 14 0 a7 6 0 1 0 -14 0 Z" fill="${c}" fill-rule="evenodd"/>` +
+        `<path d="M21 50 C20 31 38 23 51 24 C68 23 80 33 79 48 C81 56 74 58 72 63 C67 69 60 65 54 69 C46 73 40 66 33 67 C25 67 21 60 21 50 Z M43 35 a7 6 0 1 0 14 0 a7 6 0 1 0 -14 0 Z" fill="#ff9ebb" fill-rule="evenodd"/>` +
+        `<path d="M30 40 l4 -3 M66 38 l3 3 M62 52 l4 1 M33 54 l3 2" stroke-width="3.5"/>` },
+    { id: 'kuerbi', name: 'Kürbi', color: '#ffa94d', f: [50, 58, .9],
+      body: c => `<path d="M48 22 C47 15 50 10 55 8" fill="none" stroke-width="5"/>` +
+        `<ellipse cx="30" cy="56" rx="18" ry="30" fill="${c}"/><ellipse cx="70" cy="56" rx="18" ry="30" fill="${c}"/>` +
+        `<ellipse cx="50" cy="56" rx="22" ry="33" fill="${c}"/>` +
+        `<path d="M54 18 C62 12 72 14 74 20 C66 22 60 22 54 18 Z" fill="#8ce99a"/>` },
+    { id: 'zahni', name: 'Zahni', color: '#fffdf6', f: [50, 40, .8],
+      body: c => `<path d="M22 30 C22 13 41 13 50 20 C59 13 78 13 78 30 C78 46 73 55 71 70 C69 87 60 91 58 79 C56 68 44 68 42 79 C40 91 31 87 29 70 C27 55 22 46 22 30 Z" fill="${c}"/>` +
+        `<path d="M70 24 C72 28 72 32 71 35" fill="none" stroke="#8fd0ff" stroke-width="4"/>` },
+    { id: 'eisi', name: 'Eisi', color: '#ff9ebb', f: [50, 42, .85],
+      body: c => `<rect x="44" y="66" width="12" height="28" rx="5" fill="#f4c27a"/>` +
+        `<path d="M24 34 C24 10 76 10 76 34 L76 66 C76 74 70 76 66 72 C63 79 57 79 55 73 C50 77 44 77 41 72 C36 77 30 76 28 70 C24 72 24 68 24 64 Z" fill="${c}"/>` +
+        `<path d="M24 28 C40 34 60 22 76 28" fill="none" stroke="#fff" stroke-width="4"/>` },
+    { id: 'wurmi', name: 'Wurmi', color: '#f7a8c8', f: [66, 44, .7],
+      body: c => `<circle cx="18" cy="76" r="11" fill="${c}"/><circle cx="31" cy="80" r="12" fill="${c}"/>` +
+        `<circle cx="45" cy="76" r="13" fill="${c}"/><circle cx="56" cy="66" r="13" fill="${c}"/>` +
+        `<circle cx="66" cy="46" r="24" fill="${c}"/>` +
+        `<path d="M58 22 C56 14 60 10 64 10" fill="none" stroke-width="4"/><circle cx="64" cy="10" r="3" fill="#ffe066"/>` },
+    { id: 'glitzi', name: 'Glitzi', color: '#a5f3e0', f: [50, 58, .78],
+      body: c => `<path d="M30 14 L70 14 L88 36 L50 92 L12 36 Z" fill="${c}"/>` +
+        `<path d="M12 36 L88 36 M30 14 L38 36 L50 92 M70 14 L62 36 L50 92" fill="none" stroke-width="3"/>` +
+        `<path d="M80 8 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 Z" fill="#fff" stroke-width="2.5"/>` },
+    { id: 'brocko', name: 'Brocko', color: '#69db7c', f: [50, 42, .78],
+      body: c => `<path d="M38 58 L36 88 C36 92 64 92 64 88 L62 58 Z" fill="#d8f5a2"/>` +
+        `<circle cx="28" cy="44" r="18" fill="${c}"/><circle cx="72" cy="44" r="18" fill="${c}"/>` +
+        `<circle cx="38" cy="26" r="17" fill="${c}"/><circle cx="62" cy="26" r="17" fill="${c}"/>` +
+        `<ellipse cx="50" cy="44" rx="27" ry="22" fill="${c}"/>` },
+    { id: 'socki', name: 'Socki', color: '#8fd0ff', f: [50, 40, .75],
+      body: c => `<path d="M30 10 L68 10 L68 56 C68 62 72 64 80 68 C93 75 90 94 72 91 L46 88 C33 86 30 78 30 68 Z" fill="${c}"/>` +
+        `<path d="M30 10 L68 10 L68 22 L30 22 Z" fill="#fff"/>` +
+        `<path d="M30 54 L68 54 M30 62 L66 62" fill="none" stroke="#ff6b81" stroke-width="4"/>` },
+    { id: 'robo', name: 'Robo', color: '#c9d6e3', f: [50, 58, .9],
+      body: c => `<path d="M50 26 L50 14" stroke-width="4"/><circle cx="50" cy="11" r="5" fill="#ff6b6b"/>` +
+        `<rect x="8" y="46" width="10" height="22" rx="4" fill="#8d99ae"/><rect x="82" y="46" width="10" height="22" rx="4" fill="#8d99ae"/>` +
+        `<rect x="16" y="26" width="68" height="62" rx="14" fill="${c}"/>` +
+        `<path d="M24 34 l4 0 M72 34 l4 0" stroke-width="3"/>` },
+    { id: 'nana', name: 'Nana', color: '#ffe066', f: [44, 64, .62],
+      body: c => `<path d="M16 22 C9 62 40 94 86 80 C92 78 91 69 84 68 C57 66 41 47 40 22 C39 13 17 12 16 22 Z" fill="${c}"/>` +
+        `<path d="M22 14 L34 14 L33 22 L22 22 Z" fill="#8a6d3b"/>` },
+    { id: 'hoerni', name: 'Hörni', color: '#ffa8a8', f: [50, 60, .95],
+      body: c => `<path d="M26 40 C18 30 18 16 24 10 C28 22 34 28 40 32 Z" fill="#fff3b0"/>` +
+        `<path d="M74 40 C82 30 82 16 76 10 C72 22 66 28 60 32 Z" fill="#fff3b0"/>` +
+        `<path d="M50 24 C74 24 86 42 86 62 C86 82 70 92 50 92 C30 92 14 82 14 62 C14 42 26 24 50 24 Z" fill="${c}"/>` +
+        `<path d="M40 84 l4 6 4 -6 M56 84 l4 6 4 -6" fill="#fff" stroke-width="3"/>` },
+    { id: 'quabbel', name: 'Quabbel', color: '#d0bfff', f: [50, 42, .82],
+      body: c => `<path d="M26 58 C22 66 30 72 26 80 M40 60 C36 70 44 76 40 88 M60 60 C64 70 56 76 60 88 M74 58 C78 66 70 72 74 80" fill="none" stroke-width="4"/>` +
+        `<path d="M14 58 C12 22 88 22 86 58 C76 63 66 58 60 62 C54 58 46 58 40 62 C34 58 24 63 14 58 Z" fill="${c}"/>` }
+  ];
+
+  const BY_ID = {};
+  LIST.forEach(d => { BY_ID[d.id] = d; });
+
+  window.DOODLES = LIST.map(d => ({ id: d.id, name: d.name, color: d.color }));
+  window.doodleSvg = function (id, mood) {
+    const d = BY_ID[id] || LIST[0];
+    const [fx, fy, fs] = d.f;
+    return `<svg class="doodle" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
+      `<g stroke="${INK}" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">${d.body(d.color)}</g>` +
+      face(fx, fy, fs, mood || 'normal') + `</svg>`;
+  };
+})();
+
+  </script>
+  <script>
+/* ===== icons.js ===== */
+/* Eigene Icons im Kritzel-Stil (statt Emojis).
+   icon(name) liefert ein <svg>, das die Textfarbe übernimmt – passt in Hell & Dunkel.
+   medalSvg(platz) liefert eine bunte Medaille mit Zahl. */
+(function () {
+  const p = d => `<path d="${d}"/>`;
+  const c = (x, y, r, fill) => `<circle cx="${x}" cy="${y}" r="${r}"${fill ? ' fill="currentColor" stroke="none"' : ''}/>`;
+
+  const ICONS = {
+    plug: p('M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4'),
+    sound: p('M4 9h4l5-4v14l-5-4H4z M16.5 8.5c1.5 1.8 1.5 5.2 0 7 M19 6c3 3 3 9 0 12'),
+    mute: p('M4 9h4l5-4v14l-5-4H4z M16.5 9.5l5 5 M21.5 9.5l-5 5'),
+    door: p('M5 21V4.5C5 3.7 5.7 3 6.5 3h9c.8 0 1.5.7 1.5 1.5V21 M3 21h18') + c(13.5, 12.5, 1.2, true),
+    eye: p('M2.5 12C5 7 8.5 5 12 5s7 2 9.5 7c-2.5 5-6 7-9.5 7s-7-2-9.5-7z') + c(12, 12, 3),
+    target: c(12, 12, 9) + c(12, 12, 5) + c(12, 12, 1.6, true),
+    ballot: p('M4 13h16v7.5H4z M8 13V4.5h8V13 M10 8.5l1.5 1.5L14.5 7'),
+    pencil: p('M15 4.5l4.5 4.5L9 19.5l-5 1 1-5z M13 6.5l4.5 4.5'),
+    sparkle: p('M11 3c.8 4.5 2.2 6 7 7-4.8 1-6.2 2.5-7 7-.8-4.5-2.2-6-7-7 4.8-1 6.2-2.5 7-7z M19 15.5c.3 1.6.9 2.2 2.5 2.5-1.6.3-2.2.9-2.5 2.5-.3-1.6-.9-2.2-2.5-2.5 1.6-.3 2.2-.9 2.5-2.5z'),
+    flask: p('M9 3h6 M10 3v6L4.5 18.5A1.6 1.6 0 0 0 6 21h12a1.6 1.6 0 0 0 1.5-2.5L14 9V3 M7 15.5h10'),
+    book: p('M4 5c3-1.5 5.5-1.5 8 .5 2.5-2 5-2 8-.5v14c-3-1.5-5.5-1.5-8 .5-2.5-2-5-2-8-.5z M12 5.5v14'),
+    copy: p('M9 8.5c0-.8.7-1.5 1.5-1.5h8c.8 0 1.5.7 1.5 1.5v11c0 .8-.7 1.5-1.5 1.5h-8c-.8 0-1.5-.7-1.5-1.5z M6 16.5H5.5C4.7 16.5 4 15.8 4 15V4.5C4 3.7 4.7 3 5.5 3H14c.8 0 1.5.7 1.5 1.5V5'),
+    share: p('M12 15V3.5 M7.5 8L12 3.5 16.5 8 M5 12.5v7c0 .8.7 1.5 1.5 1.5h11c.8 0 1.5-.7 1.5-1.5v-7'),
+    camera: p('M3 8.5C3 7.7 3.7 7 4.5 7H7l2-3h6l2 3h2.5c.8 0 1.5.7 1.5 1.5v10c0 .8-.7 1.5-1.5 1.5h-15C3.7 20 3 19.3 3 18.5z') + c(12, 13, 3.6),
+    palette: p('M12 3a9 9 0 1 0 0 18c1.6 0 2-1.2 1.3-2.3-.8-1.3 0-2.7 1.6-2.7H17a4 4 0 0 0 4-4c0-5-4-9-9-9z') + c(7.5, 11, 1.3, true) + c(10, 7, 1.3, true) + c(15, 7.5, 1.3, true),
+    rocket: p('M12 2.5c4 2.5 5.5 6.5 5 11l-2.5 2.5h-5L7 13.5c-.5-4.5 1-8.5 5-11z M9.5 16l-2.5 4.5 M14.5 16l2.5 4.5 M12 16v5') + c(12, 9, 1.8),
+    check: p('M4 12.5l5 5L20 6'),
+    cross: p('M6 6l12 12 M18 6L6 18'),
+    dice: p('M4.5 8A3.5 3.5 0 0 1 8 4.5h8A3.5 3.5 0 0 1 19.5 8v8a3.5 3.5 0 0 1-3.5 3.5H8A3.5 3.5 0 0 1 4.5 16z') + c(9, 9, 1.4, true) + c(15, 15, 1.4, true) + c(12, 12, 1.4, true),
+    idea: p('M9.5 17.5h5 M10.5 21h3 M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1v1.5h5V16c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z'),
+    skip: p('M5 5.5l8 6.5-8 6.5z M18.5 5.5v13'),
+    flag: p('M5 21V4 M5 4.5c4-2 7 2 14 0v9c-7 2-10-2-14 0'),
+    notes: p('M6 3h9l4 4v14H6z M15 3v4h4 M9 11.5h7 M9 15.5h5'),
+    chat: p('M4 5.5C4 4.7 4.7 4 5.5 4h13c.8 0 1.5.7 1.5 1.5v9c0 .8-.7 1.5-1.5 1.5H10l-4.5 4v-4C4.7 16 4 15.3 4 14.5z'),
+    refresh: p('M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5'),
+    shrug: c(12, 12, 9) + c(9, 10, 1.1, true) + c(15, 10, 1.1, true) + p('M8.5 15.5c1.2-.9 2.3-.9 3.5 0s2.3.9 3.5 0'),
+    question: c(12, 12, 9) + p('M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4') + c(12, 16.8, 1.2, true),
+    crown: p('M3.5 8l4 4 4.5-7 4.5 7 4-4-2 11h-13z'),
+    hourglass: p('M6 3h12 M6 21h12 M7 3c0 4 4 6 5 9 1-3 5-5 5-9 M7 21c0-4 4-6 5-9 1 3 5 5 5 9'),
+    party: p('M4 20.5l4-12 8 8z M11 4c1 1 1 2.5 0 3.5 M15 7c2-1 3.5 0 4 1.5 M17 12.5c1.2-.6 2.5-.3 3 .8') + c(19.5, 4, 1.1, true) + c(14.5, 3, 1.1, true),
+    arrow: p('M4 12h15 M13 6l6 6-6 6'),
+    search: c(10.5, 10.5, 6.5) + p('M15.5 15.5L20.5 20.5'),
+    trophy: p('M7 4h10v5a5 5 0 0 1-10 0z M7 6H4c0 3 1.5 4.5 3.5 4.5 M17 6h3c0 3-1.5 4.5-3.5 4.5 M12 14v4 M8 21h8 M9.5 18h5'),
+    userplus: c(9, 8, 4) + p('M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6 M19 8v6 M16 11h6'),
+    alert: p('M12 4l9.5 16h-19z M12 10v4.5') + c(12, 17.3, 1.1, true),
+    link: p('M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1')
+  };
+
+  window.icon = function (name, cls) {
+    return `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+  };
+
+  const MEDAL = { 1: '#ffd43b', 2: '#dee2e6', 3: '#e8a46a' };
+  window.medalSvg = function (rank) {
+    return `<svg class="medal" viewBox="0 0 40 48" aria-label="Platz ${rank}">` +
+      `<path d="M10 2 L17 20 M30 2 L23 20" stroke="#e63946" stroke-width="6" stroke-linecap="round"/>` +
+      `<circle cx="20" cy="31" r="14" fill="${MEDAL[rank] || '#ced4da'}" stroke="#1d1d1d" stroke-width="3"/>` +
+      `<text x="20" y="37.5" text-anchor="middle" font-family="Permanent Marker, Comic Sans MS, cursive" font-size="17" fill="#1d1d1d">${rank}</text></svg>`;
+  };
+})();
+
+  </script>
+  <script>
+/* ===== game.js ===== */
+'use strict';
+/* =====================================================================
+   Wer bin ich? – Online-Partyspiel
+   Aufbau: Ein Browser ist der Host und verwaltet den kompletten
+   Spielstand. Alle anderen verbinden sich per WebRTC (PeerJS) direkt
+   mit ihm. Jeder Spieler bekommt vom Host nur eine "persönliche
+   Ansicht" geschickt – die eigene Figur ist darin nicht enthalten.
+   ===================================================================== */
+
+const PREFIX = 'werbinich-v1-';
+const MAX_PLAYERS = 12;
+const STOPWORDS = new Set(['prinzessin', 'captain', 'koenig', 'könig', 'königin', 'black', 'wonder', 'queen',
+  'donkey', 'master', 'chief', 'lucky', 'peter', 'thomas', 'wolfgang', 'sendung']);
+const RESULT_TEXT = { yes: 'Ja', no: 'Nein', unclear: 'Unklar' };
+const RESULT_ICON = { yes: 'check', no: 'cross', unclear: 'shrug' };
+const VOTE_TEXT = { yes: 'Ja', no: 'Nein', idk: 'Weiß nicht', unknown: 'Kenne ich nicht' };
+const VOTE_ICON = { yes: 'check', no: 'cross', idk: 'shrug', unknown: 'question' };
+const SETTINGS_DEFAULT = { continueOnYes: true, limit: 0 };
+// In der Claude-Artefakt-Version gibt es nur den Testmodus (dort ist WebRTC gesperrt)
+const TEST_ONLY = !!window.WBI_TEST_ONLY;
+let localMode = false;       // Testmodus: alle Spieler an einem Gerät
+
+/* ---------------- Hilfsfunktionen ---------------- */
+const $ = (s, r = document) => r.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+function makeRoomCode() {
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 5; i++) s += a[Math.floor(Math.random() * a.length)];
+  return s;
+}
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+function norm(s) {
+  return String(s ?? '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\b(der|die|das|the|ein|eine|ich bin|bin ich)\b/g, ' ')
+    .replace(/[^a-z0-9]/g, '');
+}
+function lev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+const letterCount = s => (String(s).match(/[\p{L}\p{N}]/gu) || []).length;
+const store = {
+  get(k, session) { try { return (session ? sessionStorage : localStorage).getItem(k); } catch (e) { return null; } },
+  set(k, v, session) { try { (session ? sessionStorage : localStorage).setItem(k, v); } catch (e) { /* egal */ } },
+  del(k, session) { try { (session ? sessionStorage : localStorage).removeItem(k); } catch (e) { /* egal */ } }
+};
+
+/* ---------------- Figurenliste ----------------
+   Wird nur noch genutzt für: „Fehlende Figuren zufällig vergeben“ (Host)
+   und um bekannte Aliase zu erkennen (z. B. „Spidey“ = Spider-Man). */
+const FIGURES = [];
+(window.FIGURE_CATEGORIES || (typeof FIGURE_CATEGORIES !== 'undefined' ? FIGURE_CATEGORIES : [])).forEach(c =>
+  c.items.forEach(s => { const [name, ...aliases] = s.split('|'); FIGURES.push({ name, aliases, cat: c.name, emoji: c.emoji }); }));
+const findFigure = name => { const n = norm(name); return FIGURES.find(f => norm(f.name) === n); };
+
+/* ---------------- Raten: Schreibweisen erkennen ---------------- */
+// 'yes' = richtig, 'maybe' = knapp dran (die anderen stimmen ab), 'no' = falsch
+function matchGuess(guess, figure, aliases = []) {
+  const g = norm(guess);
+  if (!g) return 'no';
+  let best = 'no';
+  for (const c of [figure, ...aliases].map(norm).filter(Boolean)) {
+    if (g === c) return 'yes';
+    const L = Math.max(g.length, c.length), d = lev(g, c);
+    if (d <= Math.max(1, Math.floor(L * 0.2))) return 'yes';
+    if ((c.includes(g) && g.length >= 3) || (g.includes(c) && c.length >= 3) || d <= Math.ceil(L * 0.4)) best = 'maybe';
+  }
+  return best;
+}
+
+/* ---------------- Figur-Namen in Texten finden (Spoiler-Schutz) ---------------- */
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function termsFor(p) {
+  if (!p || !p.figure) return [];
+  const t = new Set([p.figure, ...(p.aliases || [])].map(x => x.replace(/[.!?]+$/, '').trim()));
+  const words = p.figure.split(/[\s\-]+/);
+  if (words.length > 1) words.forEach(w => {
+    const c = w.replace(/[^\p{L}\p{N}]/gu, '');
+    if (c.length >= 5 && !STOPWORDS.has(c.toLowerCase())) t.add(c);
+  });
+  return [...t].filter(x => letterCount(x) >= 2).sort((a, b) => b.length - a.length);
+}
+function termRegex(term) {
+  const pat = term.trim().split(/[\s\-]+/).map(escRe).join('[\\s\\-]*');
+  return new RegExp('(?<![\\p{L}\\p{N}])' + pat + '(?![\\p{L}\\p{N}])', 'giu');
+}
+const containsTerms = (text, terms) => terms.some(t => termRegex(t).test(text));
+const censorText = (text, terms) => terms.reduce((out, t) => out.replace(termRegex(t), '★★★'), text);
+
+/* =====================================================================
+   HOST: Spielstand & Regeln
+   ===================================================================== */
+let S = null;                // kompletter Spielstand (nur beim Host)
+const conns = new Map();     // Spieler-ID -> PeerJS-Verbindung
+const lastSeen = new Map();
+const chatTimes = new Map();
+
+const P = id => S.players.find(p => p.id === id);
+const isActive = p => !!p && !p.solved && !p.gaveUp;
+const limitReached = p => S.settings.limit > 0 && p.questions.length >= S.settings.limit;
+const canHaveTurn = p => isActive(p) && p.connected && !limitReached(p);
+const currentId = () => (S.turn >= 0 ? S.order[S.turn] : null);
+
+function newPlayer(id, name, isHost, avatar = null, doodle = null) {
+  return { id, name, isHost: !!isHost, connected: true, avatar: validAvatar(avatar), doodle: validDoodle(doodle, id), figure: null, aliases: [], giverId: null,
+    solved: false, gaveUp: false, rank: 0, questions: [], wrong: 0, roundScore: 0, total: 0 };
+}
+function hostCreate(code, name) {
+  S = { code, hostId: myId, phase: 'lobby', round: 1, settings: { ...SETTINGS_DEFAULT },
+    players: [newPlayer(myId, name, true, localMode ? null : store.get(PREFIX + 'avatar'), localMode ? null : store.get(PREFIX + 'doodle'))], assign: {}, order: [], turn: -1,
+    pendingQ: null, pendingG: null, log: [], solvedCount: 0, seq: 0 };
+}
+function addLog(type, text, author = null, extra = {}) {
+  const a = author ? P(author) : null;
+  S.log.push({ n: ++S.seq, type, text, author, name: a ? a.name : null, ...extra });
+  if (S.log.length > 250) S.log.shift();
+}
+function resetRound() {
+  S.players.forEach(p => Object.assign(p, { figure: null, aliases: [], giverId: null, solved: false,
+    gaveUp: false, rank: 0, questions: [], wrong: 0, roundScore: 0 }));
+  Object.assign(S, { assign: {}, order: [], turn: -1, pendingQ: null, pendingG: null, log: [], solvedCount: 0 });
+}
+
+function nextTurn() {
+  S.pendingQ = null;
+  const n = S.order.length;
+  for (let k = 1; k <= n; k++) {
+    const i = ((S.turn + k) % n + n) % n;
+    if (canHaveTurn(P(S.order[i]))) { S.turn = i; return; }
+  }
+  S.turn = -1;
+}
+function fixTurn() {
+  const cur = currentId();
+  if (cur === null || !canHaveTurn(P(cur))) {
+    const before = cur;
+    nextTurn();
+    const now = currentId();
+    if (now && now !== before) addLog('sys', `${P(now).name} ist dran.`, null, { icon: 'arrow' });
+  }
+}
+const voters = excl => S.players.filter(p => p.id !== excl && p.connected);
+const allVoted = (pend, excl) => voters(excl).every(p => pend.votes[p.id]);
+function countVotes(votes) {
+  const c = { yes: 0, no: 0, idk: 0, unknown: 0 };
+  Object.values(votes).forEach(v => { if (v in c) c[v]++; });
+  return c;
+}
+
+function resolveQ() {
+  const q = S.pendingQ, a = P(q.askerId);
+  const c = countVotes(q.votes);
+  let result = 'unclear';
+  if (c.yes > c.no && c.yes >= c.idk) result = 'yes';
+  else if (c.no > c.yes && c.no >= c.idk) result = 'no';
+  a.questions.push({ text: q.text, result, c });
+  addLog('ans', null, a.id, { result, c });
+  S.pendingQ = null;
+  if (result === 'yes' && S.settings.continueOnYes) {
+    if (!limitReached(a)) addLog('sys', `${a.name} darf weiterfragen.`, null, { icon: 'arrow' });
+  } else if (result === 'unclear') {
+    if (!limitReached(a)) addLog('sys', `Unklare Antwort – ${a.name} darf die Frage anders stellen.`, null, { icon: 'shrug' });
+  } else {
+    nextTurn();
+    const now = currentId();
+    if (now) addLog('sys', `${P(now).name} ist dran.`, null, { icon: 'arrow' });
+  }
+}
+function resolveG() {
+  const g = S.pendingG, p = P(g.playerId);
+  const c = countVotes(g.votes);
+  S.pendingG = null;
+  if (!isActive(p)) return;
+  if (c.yes > c.no) { addLog('sys', `Die anderen lassen „${g.text}“ gelten!`, null, { icon: 'check' }); solve(p); }
+  else wrongGuess(p, g.text, true);
+}
+function solve(p) {
+  p.solved = true;
+  p.rank = ++S.solvedCount;
+  const base = Math.max(10, 100 - 5 * p.questions.length - 10 * p.wrong);
+  p.roundScore = base + ([30, 20, 10][p.rank - 1] || 0);
+  p.total += p.roundScore;
+  addLog('sys', `${p.name} hat es erraten: ${p.figure}! (Platz ${p.rank}, +${p.roundScore} Punkte)`, null, { icon: 'party' });
+  if (S.pendingG && S.pendingG.playerId === p.id) S.pendingG = null;
+  broadcastEvent({ t: 'event', kind: 'solved', id: p.id, name: p.name });
+  if (currentId() === p.id) nextTurn();
+}
+function wrongGuess(p, text, afterVote) {
+  p.wrong++;
+  addLog('guess', text, p.id, { verdict: 'wrong', afterVote: !!afterVote });
+  if (currentId() === p.id) nextTurn();
+}
+function checkEnd() {
+  if (S.phase !== 'play') return;
+  if (!S.players.some(p => isActive(p) && p.connected)) {
+    S.phase = 'end'; S.pendingQ = null; S.pendingG = null; S.turn = -1;
+    addLog('sys', 'Runde vorbei!', null, { icon: 'trophy' });
+  }
+}
+function startAssign() {
+  S.players = S.players.filter(p => p.connected);
+  resetRound();
+  const ids = shuffle(S.players.map(p => p.id));
+  ids.forEach((id, i) => { S.assign[id] = ids[(i + 1) % ids.length]; });
+  S.phase = 'assign';
+}
+function startPlay() {
+  S.phase = 'play';
+  S.order = shuffle(S.players.map(p => p.id));
+  S.turn = -1;
+  nextTurn();
+  addLog('sys', `Los geht's! ${currentId() ? P(currentId()).name + ' beginnt.' : ''}`, null, { icon: 'dice' });
+}
+function fillRandom() {
+  const used = new Set(S.players.filter(p => p.figure).map(p => norm(p.figure)));
+  S.players.filter(p => !p.figure).forEach(p => {
+    const pool = FIGURES.filter(f => !used.has(norm(f.name)));
+    const f = pool[Math.floor(Math.random() * pool.length)];
+    used.add(norm(f.name));
+    Object.assign(p, { figure: f.name, aliases: f.aliases, giverId: null });
+  });
+  startPlay();
+}
+// Prüft, ob ein Text die geheime Figur eines anderen (noch ratenden) Spielers enthält
+function spoilerVictim(text, senderId) {
+  return S.players.find(o => o.id !== senderId && isActive(o) && containsTerms(text, termsFor(o)));
+}
+function sanitizeSettings(s) {
+  s = s || {};
+  return {
+    continueOnYes: !!s.continueOnYes,
+    limit: [0, 10, 15, 20, 30].includes(+s.limit) ? +s.limit : 0
+  };
+}
+
+// Kritzel-Figur: muss aus der Liste stammen, sonst feste Figur je Spieler-ID
+function validDoodle(d, id) {
+  const list = window.DOODLES || [];
+  if (list.some(x => x.id === d)) return d;
+  return list.length ? list[hashOf(id || '', list.length)].id : 'blobbi';
+}
+// Profilbild: nur kleine, selbst verkleinerte JPEG-Bilder als data:-URL erlaubt
+function validAvatar(d) {
+  return (typeof d === 'string' && d.length < 60000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d)) ? d : null;
+}
+
+/* ---------- Aktionen der Spieler (läuft nur beim Host) ---------- */
+function hostHandle(id, msg) {
+  const p = P(id);
+  if (!p || !msg || typeof msg !== 'object') return;
+  const err = (m, extra = {}) => sendTo(id, { t: 'error', msg: m, ...extra });
+  const isH = id === S.hostId || localMode;
+  const play = S.phase === 'play';
+
+  switch (msg.t) {
+    case 'ping': return;
+
+    case 'settings':
+      if (!isH || S.phase !== 'lobby') return;
+      S.settings = sanitizeSettings(msg.s);
+      break;
+
+    case 'start':
+      if (!isH || S.phase !== 'lobby') return;
+      if (S.players.filter(x => x.connected).length < 2) return err('Ihr braucht mindestens 2 Spieler.');
+      startAssign();
+      break;
+
+    case 'assign': {
+      if (S.phase !== 'assign') return;
+      const t = P(S.assign[id]);
+      if (!t) return;
+      const fig = clean(msg.figure, 60);
+      if (letterCount(fig) < 2) return err('Bitte eine Figur eingeben.', { where: 'assign' });
+      if (S.players.some(o => o.id !== t.id && o.figure && norm(o.figure) === norm(fig)))
+        return err('Diese Figur hat schon jemand anderes – bitte eine andere wählen.', { where: 'assign' });
+      const known = findFigure(fig);   // bekannte Figur? Dann zählen auch ihre Aliase beim Raten
+      t.figure = fig;
+      t.aliases = known ? known.aliases.concat(known.name) : [];
+      t.giverId = id;
+      if (S.players.every(x => x.figure)) startPlay();
+      break;
+    }
+
+    case 'fill':
+      if (!isH || S.phase !== 'assign') return;
+      fillRandom();
+      break;
+
+    case 'ask': {
+      if (!play) return;
+      if (currentId() !== id) return err('Du bist gerade nicht dran.');
+      if (!isActive(p)) return;
+      if (S.pendingQ) return err('Warte, bis die letzte Frage beantwortet ist.');
+      if (limitReached(p)) return err('Du hast keine Fragen mehr übrig – jetzt raten!');
+      const text = clean(msg.text, 160);
+      if (letterCount(text) < 2) return err('Bitte eine Frage eingeben.');
+      const v = spoilerVictim(text, id);
+      if (v) return err(`Nicht gesendet: Die Frage enthält die geheime Figur von ${v.name}!`);
+      S.pendingQ = { n: ++S.seq, askerId: id, text, votes: {} };
+      addLog('q', text, id);
+      break;
+    }
+
+    case 'vote':
+      if (!play || !S.pendingQ || S.pendingQ.askerId === id) return;
+      if (!['yes', 'no', 'idk', 'unknown'].includes(msg.v)) return;
+      S.pendingQ.votes[id] = msg.v;
+      break;
+
+    case 'resolve':
+      if (!play || !S.pendingQ) return;
+      if (S.pendingQ.askerId !== id && !isH) return;
+      if (!Object.keys(S.pendingQ.votes).length) return err('Es hat noch niemand abgestimmt.');
+      resolveQ();
+      break;
+
+    case 'guess': {
+      if (!play || !isActive(p)) return;
+      if (S.pendingQ && S.pendingQ.askerId === id) return err('Warte erst die Antwort auf deine Frage ab.');
+      if (S.pendingG) return err('Gerade wird schon ein Tipp geprüft – kurz warten.');
+      const text = clean(msg.text, 60);
+      if (letterCount(text) < 1) return err('Bitte einen Tipp eingeben.');
+      const r = matchGuess(text, p.figure, p.aliases);
+      if (r === 'yes') { addLog('guess', text, id, { verdict: 'right' }); solve(p); }
+      else if (r === 'no') wrongGuess(p, text);
+      else {
+        S.pendingG = { n: ++S.seq, playerId: id, text, votes: {} };
+        addLog('guess', text, id, { verdict: 'check' });
+      }
+      break;
+    }
+
+    case 'gvote':
+      if (!play || !S.pendingG || S.pendingG.playerId === id) return;
+      if (!['yes', 'no'].includes(msg.v)) return;
+      S.pendingG.votes[id] = msg.v;
+      break;
+
+    case 'gresolve':
+      if (!play || !S.pendingG || !isH) return;
+      resolveG();
+      break;
+
+    case 'avatar':
+      p.avatar = validAvatar(msg.data);
+      break;
+
+    case 'doodle':
+      p.doodle = validDoodle(msg.id, p.id);
+      p.avatar = null;   // Figur gewählt -> Foto wird ersetzt
+      break;
+
+    case 'pass':
+      if (!play || currentId() !== id || S.pendingQ) return;
+      addLog('sys', `${p.name} passt.`, null, { icon: 'skip' });
+      nextTurn();
+      break;
+
+    case 'skip':
+      if (!play || !isH || currentId() === null) return;
+      addLog('sys', `${P(currentId()).name} wurde übersprungen.`, null, { icon: 'skip' });
+      nextTurn();
+      break;
+
+    case 'giveup':
+      if (!play || !isActive(p)) return;
+      p.gaveUp = true; p.roundScore = 0;
+      addLog('sys', `${p.name} gibt auf – gesucht war: ${p.figure}`, null, { icon: 'flag' });
+      if (S.pendingG && S.pendingG.playerId === id) S.pendingG = null;
+      if (currentId() === id) nextTurn();
+      break;
+
+    case 'chat': {
+      if (S.phase === 'lobby') return;
+      const now = Date.now();
+      const times = (chatTimes.get(id) || []).filter(t => now - t < 5000);
+      if (times.length >= 6) return err('Nicht so schnell!');
+      times.push(now); chatTimes.set(id, times);
+      const text = clean(msg.text, 200);
+      if (!text) return;
+      const v = spoilerVictim(text, id);
+      if (v) return err(`Nicht gesendet: Die Nachricht enthält die geheime Figur von ${v.name}!`);
+      addLog('chat', text, id);
+      break;
+    }
+
+    case 'newRound':
+      if (!isH || S.phase !== 'end') return;
+      S.round++;
+      S.players = S.players.filter(x => x.connected);
+      resetRound();
+      S.phase = 'lobby';
+      break;
+
+    default: return;
+  }
+  commit();
+}
+
+function commit() {
+  if (S.phase === 'play') {
+    if (S.pendingQ && allVoted(S.pendingQ, S.pendingQ.askerId)) resolveQ();
+    if (S.pendingG && allVoted(S.pendingG, S.pendingG.playerId)) resolveG();
+    checkEnd();
+    if (S.phase === 'play') fixTurn();
+  }
+  saveHost();
+  broadcast();
+}
+
+/* ---------- Persönliche Ansicht: entfernt die eigene Figur ---------- */
+function view(R) {
+  const me = P(R);
+  const myTerms = (me && isActive(me) && S.phase !== 'end') ? termsFor(me) : [];
+  const cen = (text, author) => (text == null || author === R || !myTerms.length) ? text : censorText(text, myTerms);
+  const showFig = p => {
+    if (!p.figure) return false;
+    if (S.phase === 'end') return true;
+    if (p.id === R) return p.solved || p.gaveUp;
+    if (S.phase === 'play') return true;
+    if (S.phase === 'assign') return p.giverId === R;
+    return false;
+  };
+  return {
+    me: R, code: S.code, hostId: S.hostId, phase: S.phase, round: S.round, settings: S.settings,
+    currentId: S.phase === 'play' ? currentId() : null,
+    myTarget: S.phase === 'assign' ? (S.assign[R] || null) : null,
+    players: S.players.map(p => ({
+      id: p.id, name: p.name, isHost: p.isHost, connected: p.connected, avatar: p.avatar || null,
+      figure: showFig(p) ? p.figure : null,
+      doodle: p.doodle,
+      hasFigure: !!p.figure,
+      solved: p.solved, gaveUp: p.gaveUp, rank: p.rank, wrong: p.wrong,
+      roundScore: p.roundScore, total: p.total, qCount: p.questions.length,
+      questions: p.questions.map(q => ({ text: cen(q.text, p.id), result: q.result, c: q.c }))
+    })),
+    pendingQ: S.pendingQ ? { n: S.pendingQ.n, askerId: S.pendingQ.askerId, text: cen(S.pendingQ.text, S.pendingQ.askerId), votes: S.pendingQ.votes } : null,
+    pendingG: S.pendingG ? { n: S.pendingG.n, playerId: S.pendingG.playerId, text: cen(S.pendingG.text, S.pendingG.playerId), votes: S.pendingG.votes } : null,
+    log: S.log.slice(-150).map(e => ({ ...e, text: cen(e.text, e.author) }))
+  };
+}
+
+/* ---------- Senden ---------- */
+function sendTo(id, m) {
+  if (id === myId) { onHostMsg(m); return; }
+  if (localMode) return;
+  const c = conns.get(id);
+  if (c && c.open) { try { c.send(m); } catch (e) { /* ignorieren */ } }
+}
+function broadcast() {
+  if (!localMode) S.players.forEach(p => { if (p.id !== myId) sendTo(p.id, { t: 'state', v: view(p.id) }); });
+  onHostMsg({ t: 'state', v: view(myId) });
+  renderViewBar();
+}
+function broadcastEvent(m) { setTimeout(() => S.players.forEach(p => sendTo(p.id, m)), 50); }
+
+/* ---------- Testmodus: alle Spieler an einem Gerät ---------- */
+let skipNotify = false;
+function startLocal(names) {
+  localMode = true; isHost = true; roomCode = 'TEST';
+  const ids = names.map((_, i) => `p${i + 1}-${uid()}`);
+  myId = ids[0];
+  hostCreate('TEST', names[0]);
+  names.slice(1).forEach((n, i) => S.players.push(newPlayer(ids[i + 1], uniqueName(n), false)));
+  commit();
+}
+function switchView(id) {
+  if (!localMode || id === myId || !P(id)) return;
+  myId = id;
+  lastLogN = -1; skipNotify = true;
+  ['#q-input', '#guess-input', '#chat-input', '#fig-input'].forEach(s => { $(s).value = ''; });
+  $('#guess-box').classList.add('hidden');
+  $('#assign-error').textContent = '';
+  openCards.clear(); revealed.clear();
+  onHostMsg({ t: 'state', v: view(myId) });
+  renderViewBar();
+  window.scrollTo({ top: 0 });
+}
+function renderViewBar() {
+  const show = localMode && !!S;
+  $('#view-bar').classList.toggle('hidden', !show);
+  if (!show) return;
+  $('#view-buttons').innerHTML = S.players.map(p => {
+    let tag = '';
+    if (S.phase === 'assign' && !(P(S.assign[p.id]) || {}).figure) tag = 'pencil';
+    else if (S.phase === 'play') {
+      if ((S.pendingQ && S.pendingQ.askerId !== p.id && !S.pendingQ.votes[p.id]) ||
+          (S.pendingG && S.pendingG.playerId !== p.id && !S.pendingG.votes[p.id])) tag = 'ballot';
+      else if (currentId() === p.id && !S.pendingQ) tag = 'target';
+    }
+    return `<button class="vb ${p.id === myId ? 'active' : ''}" data-act="view" data-id="${esc(p.id)}">${esc(p.name)}${tag ? icon(tag) : ''}</button>`;
+  }).join('');
+}
+
+function saveHost() { if (localMode) return; store.set(PREFIX + 'host-' + S.code, JSON.stringify({ S, at: Date.now() })); }
+function loadHostSave(code) {
+  try {
+    const d = JSON.parse(store.get(PREFIX + 'host-' + code));
+    if (d && d.S && Date.now() - d.at < 12 * 3600 * 1000) return d.S;
+  } catch (e) { /* kaputt */ }
+  return null;
+}
+
+/* =====================================================================
+   NETZWERK (PeerJS)
+   ===================================================================== */
+let myId = store.get(PREFIX + 'id', true);
+if (!myId) { myId = uid(); store.set(PREFIX + 'id', myId, true); }
+let myName = '';
+let isHost = false, peer = null, hostConn = null, roomCode = null;
+let everConnected = false, lastHostMsg = 0, reconnectTimer = null, connectTimeout = null, leaving = false;
+
+function uniqueName(name) {
+  let n = name, i = 2;
+  while (S.players.some(p => p.name.toLowerCase() === n.toLowerCase())) n = `${name} ${i++}`;
+  return n;
+}
+const cleanName = n => clean(n, 20) || 'Spieler';
+
+/* ---------- Host ---------- */
+function startHost(code, resume, tries = 0) {
+  isHost = true; roomCode = code;
+  setStatus(resume ? 'Stelle den Raum wieder her …' : 'Erstelle Raum …');
+  peer = new Peer(PREFIX + code, { debug: 1 });
+  peer.on('open', () => {
+    setConn(true);
+    if (!resume) hostCreate(code, myName);
+    else S.players.forEach(p => { p.connected = p.id === myId; });
+    setUrl(code);
+    store.set(PREFIX + 'joined-' + code, myName, true);
+    commit();
+  });
+  peer.on('connection', conn => {
+    conn.on('data', m => onConnData(conn, m));
+    conn.on('close', () => onConnClose(conn));
+    conn.on('error', () => onConnClose(conn));
+  });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id') {
+      try { peer.destroy(); } catch (x) { /* egal */ }
+      if (!resume) return startHost(makeRoomCode(), false);           // Code schon vergeben -> neuer Code
+      if (tries < 10) return setTimeout(() => startHost(code, true, tries + 1), 2500); // alter Tab gibt ID noch frei
+      return showStartError('Der Raum ist gerade noch belegt. Bitte in ein paar Sekunden neu laden.');
+    }
+    if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)) setConn(false);
+    console.warn('PeerJS', e.type, e);
+  });
+  peer.on('disconnected', () => { setConn(false); setTimeout(() => { try { if (!peer.destroyed) peer.reconnect(); } catch (x) { /* egal */ } }, 1500); });
+}
+function onConnData(conn, msg) {
+  if (!msg || typeof msg !== 'object' || !S) return;
+  if (msg.t === 'join') {
+    const id = clean(msg.id, 40);
+    if (!id) return;
+    let p = P(id);
+    if (!p) {
+      const fail = m => { try { conn.send({ t: 'error', msg: m, fatal: true }); } catch (e) { /* egal */ } setTimeout(() => conn.close(), 800); };
+      if (S.phase !== 'lobby') return fail('Das Spiel läuft schon – warte, bis der Host eine neue Runde startet, und tritt dann bei.');
+      if (S.players.length >= MAX_PLAYERS) return fail('Der Raum ist voll (max. 12 Spieler).');
+      p = newPlayer(id, uniqueName(cleanName(msg.name)), false, msg.avatar, msg.doodle);
+      S.players.push(p);
+      toast(`${p.name} ist beigetreten`, '', 'userplus');
+    } else {
+      if (!p.connected && S.phase !== 'lobby') addLog('sys', `${p.name} ist wieder da.`, null, { icon: 'plug' });
+      p.connected = true;
+    }
+    const old = conns.get(id);
+    conns.set(id, conn);
+    if (old && old !== conn) { try { old.close(); } catch (e) { /* egal */ } }
+    conn._pid = id;
+    lastSeen.set(id, Date.now());
+    commit();
+    return;
+  }
+  const id = conn._pid;
+  if (!id || conns.get(id) !== conn) return;
+  lastSeen.set(id, Date.now());
+  hostHandle(id, msg);
+}
+function onConnClose(conn) {
+  const id = conn._pid;
+  if (!id || conns.get(id) !== conn) return;
+  conns.delete(id);
+  markDisconnected(id);
+}
+function markDisconnected(id) {
+  const p = P(id);
+  if (!p || !p.connected || id === myId) return;
+  p.connected = false;
+  if (S.phase === 'lobby') S.players = S.players.filter(x => x.id !== id);
+  else addLog('sys', `${p.name} ist offline.`, null, { icon: 'plug' });
+  commit();
+}
+// Herzschlag: erkennt Spieler, die einfach den Tab geschlossen haben
+setInterval(() => {
+  if (!isHost || !S) return;
+  const now = Date.now();
+  conns.forEach((c, id) => {
+    if (now - (lastSeen.get(id) || 0) > 15000) { conns.delete(id); try { c.close(); } catch (e) { /* egal */ } markDisconnected(id); }
+    else if (c.open) { try { c.send({ t: 'ping' }); } catch (e) { /* egal */ } }
+  });
+}, 4000);
+
+/* ---------- Mitspieler ---------- */
+function startClient(code) {
+  isHost = false; roomCode = code;
+  setStatus('Verbinde …');
+  peer = new Peer(undefined, { debug: 1 });
+  peer.on('open', connectToHost);
+  peer.on('error', e => {
+    if (e.type === 'peer-unavailable') {
+      if (!everConnected) { leaveRoom(true); return showStartError(`Raum „${code}“ nicht gefunden. Stimmt der Code? Ist der Host noch online?`); }
+      return scheduleReconnect();
+    }
+    if (['network', 'server-error', 'socket-error', 'socket-closed', 'disconnected'].includes(e.type)) scheduleReconnect();
+    console.warn('PeerJS', e.type, e);
+  });
+  peer.on('disconnected', () => { setTimeout(() => { try { if (!peer.destroyed) peer.reconnect(); } catch (x) { /* egal */ } }, 1500); });
+}
+function connectToHost() {
+  if (leaving) return;
+  if (hostConn) { const old = hostConn; hostConn = null; try { old.close(); } catch (e) { /* egal */ } }
+  const c = peer.connect(PREFIX + roomCode, { reliable: true });
+  hostConn = c;
+  clearTimeout(connectTimeout);
+  connectTimeout = setTimeout(() => { if (hostConn === c && !c.open) scheduleReconnect(); }, 9000);
+  c.on('open', () => {
+    clearTimeout(connectTimeout);
+    everConnected = true; lastHostMsg = Date.now();
+    c.send({ t: 'join', id: myId, name: myName, avatar: store.get(PREFIX + 'avatar'), doodle: store.get(PREFIX + 'doodle') });
+    store.set(PREFIX + 'joined-' + roomCode, myName, true);
+    setConn(true);
+  });
+  c.on('data', m => { if (hostConn === c) { lastHostMsg = Date.now(); onHostMsg(m); } });
+  c.on('close', () => { if (hostConn === c) scheduleReconnect(); });
+  c.on('error', () => { if (hostConn === c) scheduleReconnect(); });
+}
+function scheduleReconnect() {
+  if (leaving || reconnectTimer) return;
+  setConn(false);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (leaving) return;
+    if (peer.destroyed) return startClient(roomCode);
+    if (peer.disconnected) { try { peer.reconnect(); } catch (e) { /* egal */ } setTimeout(connectToHost, 1200); }
+    else connectToHost();
+  }, 2500);
+}
+setInterval(() => {
+  if (isHost || !hostConn || leaving) return;
+  if (hostConn.open) { try { hostConn.send({ t: 'ping' }); } catch (e) { /* egal */ } }
+  if (everConnected && Date.now() - lastHostMsg > 15000) { lastHostMsg = Date.now(); scheduleReconnect(); }
+}, 4000);
+
+function send(msg) {
+  if (isHost) { hostHandle(myId, msg); return; }
+  if (hostConn && hostConn.open) hostConn.send(msg);
+  else toast('Keine Verbindung zum Host – versuche neu zu verbinden …', 'error');
+}
+function leaveRoom(silent) {
+  leaving = true;
+  if (roomCode) store.del(PREFIX + 'joined-' + roomCode, true);
+  if (isHost && roomCode) store.del(PREFIX + 'host-' + roomCode);
+  try { if (peer) peer.destroy(); } catch (e) { /* egal */ }
+  if (!silent && !localMode) { location.href = location.pathname; return; }
+  if (localMode) { localMode = false; myId = store.get(PREFIX + 'id', true) || uid(); }
+  peer = null; hostConn = null; isHost = false; V = null; prevV = null; S = null; lastLogN = -1; seenLobby.clear(); revealed.clear();
+  try { history.replaceState(null, '', location.pathname); } catch (e) { /* egal */ }
+  leaving = false; everConnected = false;
+  showScreen('start');
+  $('#topbar').classList.add('hidden');
+  $('#view-bar').classList.add('hidden');
+  document.title = 'Wer bin ich? – Online';
+}
+
+/* ---------- Eigene Bestätigung (statt confirm()) ---------- */
+function askConfirm(text, okLabel = 'Ja') {
+  return new Promise(resolve => {
+    $('#modal-text').textContent = text;
+    $('#modal-ok').innerHTML = okLabel;
+    $('#modal').classList.remove('hidden');
+    const done = v => {
+      $('#modal').classList.add('hidden');
+      $('#modal-ok').onclick = null; $('#modal-cancel').onclick = null;
+      resolve(v);
+    };
+    $('#modal-ok').onclick = () => done(true);
+    $('#modal-cancel').onclick = () => done(false);
+    $('#modal-ok').focus();
+  });
+}
+
+/* =====================================================================
+   OBERFLÄCHE
+   ===================================================================== */
+let V = null, prevV = null;
+const openCards = new Set();
+let soundOn = store.get(PREFIX + 'sound') !== '0';
+let actx = null;
+
+function onHostMsg(m) {
+  if (!m || typeof m !== 'object') return;
+  if (m.t === 'state') {
+    prevV = V; V = m.v;
+    if (V.phase === 'assign' && (!prevV || prevV.phase !== 'assign')) {   // neue Runde: Auswahl zurücksetzen
+      $('#fig-input').value = ''; $('#assign-error').textContent = '';
+    }
+    render();
+    if (skipNotify) skipNotify = false; else notify();
+  }
+  else if (m.t === 'error') {
+    if (m.fatal) { leaveRoom(true); showStartError(m.msg); return; }
+    if (m.where === 'assign') { $('#assign-error').textContent = m.msg; $('#assign-done').textContent = ''; }
+    toast(m.msg, 'error');
+    beep(220, .18);
+  } else if (m.t === 'event' && m.kind === 'solved') {
+    confetti(m.id === (V && V.me) ? 160 : 60);
+    if (V && m.id === V.me) { toast('Richtig! Du hast es erraten!', 'good', 'party'); beep(880, .12); setTimeout(() => beep(1175, .2), 130); }
+    else toast(`${m.name} hat es erraten!`, 'good', 'party');
+  }
+}
+
+const pl = id => V && V.players.find(p => p.id === id);
+const meP = () => pl(V.me);
+const amHost = () => !!V && (V.me === V.hostId || localMode);
+const NOTE_COLORS = ['#ffe066', '#ff9ebb', '#8ce99a', '#ffb366', '#8fd0ff', '#c3b1ff', '#ffd6a5', '#a5f3e0', '#f9c6ff', '#d8f5a2', '#ffc9c9', '#b6e3ff'];
+const hashOf = (str, mod) => { let h = 0; for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) % mod; return h; };
+function avatar(p, mood) {
+  if (p.avatar) return `<span class="avatar"><img src="${esc(p.avatar)}" alt=""></span>`;
+  return `<span class="avatar doodle-av">${doodleSvg(p.doodle, mood || (p.solved ? 'happy' : 'normal'))}</span>`;
+}
+// Jeder Spieler bekommt eine feste Zettelfarbe und eine leichte Schräglage
+function noteStyle(p) {
+  const i = Math.max(0, V.players.findIndex(x => x.id === p.id));
+  return `--note:${NOTE_COLORS[i % NOTE_COLORS.length]};--rot:${(hashOf(p.id, 7) - 3) * 0.8}deg`;
+}
+const seenLobby = new Set(), revealed = new Set();
+function showScreen(name) {
+  ['start', 'lobby', 'assign', 'play', 'end'].forEach(s => $('#screen-' + s).classList.toggle('hidden', s !== name));
+}
+function setConn(on) {
+  $('#conn-dot').classList.toggle('on', on);
+  $('#conn-banner').classList.toggle('hidden', on || !V);
+}
+function setStatus(t) { $('#start-status').textContent = t; $('#start-error').textContent = ''; }
+function showStartError(t) { showScreen('start'); $('#start-status').textContent = ''; $('#start-error').textContent = t; }
+function setUrl(code) { try { history.replaceState(null, '', location.pathname + '?raum=' + code); } catch (e) { /* egal */ } }
+const shareUrl = code => location.origin + location.pathname + '?raum=' + code;
+
+function toast(msg, type = '', ic = null) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  ic = ic || (type === 'error' ? 'alert' : type === 'good' ? 'check' : null);
+  t.innerHTML = (ic ? icon(ic) : '') + `<span>${esc(msg)}</span>`;
+  $('#toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3600);
+}
+function beep(freq = 660, dur = 0.12) {
+  if (!soundOn) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.15, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur);
+  } catch (e) { /* kein Ton */ }
+}
+function confetti(n = 80) {
+  const box = $('#confetti');
+  const colors = NOTE_COLORS.concat(['#e63946', '#2b2118']);
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('i');
+    c.className = 'cf';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = 2 + Math.random() * 2 + 's';
+    c.style.animationDelay = Math.random() * .5 + 's';
+    box.appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+  }
+}
+// Ton & Hinweis, wenn man dran ist oder abstimmen soll
+function notify() {
+  if (!V || V.phase !== 'play') { document.title = 'Wer bin ich? – Online'; return; }
+  const was = prevV && prevV.phase === 'play' ? prevV : null;
+  if (V.currentId === V.me && (!was || was.currentId !== V.me)) {
+    toast('Du bist dran!', '', 'target'); beep(740, .15);
+    if (navigator.vibrate) navigator.vibrate(120);
+  }
+  if (V.pendingQ && V.pendingQ.askerId !== V.me && (!was || !was.pendingQ || was.pendingQ.n !== V.pendingQ.n)) beep(520, .1);
+  if (V.pendingG && V.pendingG.playerId !== V.me && (!was || !was.pendingG || was.pendingG.n !== V.pendingG.n)) beep(600, .1);
+  document.title = V.currentId === V.me ? 'Du bist dran! – Wer bin ich?' : 'Wer bin ich? – Online';
+}
+
+/* ---------- Render ---------- */
+function render() {
+  if (!V) return;
+  $('#topbar').classList.remove('hidden');
+  document.title = V.phase === 'play' && V.currentId === V.me ? 'Du bist dran! – Wer bin ich?' : 'Wer bin ich? – Online';
+  $('#top-label').innerHTML = localMode ? icon('flask') : 'Raum';
+  $('#top-code').textContent = localMode ? 'Testmodus' : V.code;
+  $('#conn-dot').classList.toggle('hidden', localMode);
+  setConn(isHost ? true : !!(hostConn && hostConn.open));
+  showScreen(V.phase);
+  if (V.phase === 'lobby') renderLobby();
+  else if (V.phase === 'assign') renderAssign();
+  else if (V.phase === 'play') renderPlay();
+  else if (V.phase === 'end') renderEnd();
+}
+
+function renderLobby() {
+  $('#share-card').classList.toggle('hidden', localMode);
+  $('#lobby-code').textContent = V.code;
+  $('#share-link').value = shareUrl(V.code);
+  $('#lobby-count').textContent = `${V.players.length}/${MAX_PLAYERS}`;
+  $('#lobby-players').innerHTML = V.players.map(p => {
+    const fresh = !seenLobby.has(p.id); seenLobby.add(p.id);
+    return `<li class="lnote ${fresh ? 'stick' : ''} ${p.connected ? '' : 'off'}" style="${noteStyle(p)}">${avatar(p)}
+      <b class="lnote-name">${esc(p.name)}</b>
+      <span class="lnote-meta">${p.id === V.me ? '<span class="you">Du</span>' : ''}${p.isHost ? icon('crown') + ' Host' : ''}${p.total ? ` · ${p.total} Pkt.` : ''}</span></li>`;
+  }).join('');
+  const me = meP();
+  $('#my-avatar-preview').innerHTML = me ? avatar(me) : '';
+  $('#btn-avatar-remove').classList.toggle('hidden', !(me && me.avatar));
+  $('#avatar-label').innerHTML = icon('camera') + (me && me.avatar ? ' Anderes Foto' : ' Foto wählen');
+  if (!$('#doodle-picker').classList.contains('hidden') && me) renderDoodlePicker(me);
+  const h = amHost(), s = V.settings;
+  $('#settings-card').classList.toggle('readonly', !h);
+  $('#settings-note').textContent = h ? '' : '(legt der Host fest)';
+  $('#set-continue').checked = s.continueOnYes; $('#set-continue').disabled = !h;
+  $('#set-limit').value = String(s.limit); $('#set-limit').disabled = !h;
+  const online = V.players.filter(p => p.connected).length;
+  $('#btn-start').classList.toggle('hidden', !h);
+  $('#btn-start').disabled = online < 2;
+  $('#lobby-wait').innerHTML = h
+    ? (online < 2 ? 'Warte auf mindestens einen Mitspieler …' : `${online} Spieler bereit – los geht's!`)
+    : icon('hourglass') + ' Warte, bis der Host das Spiel startet …';
+}
+
+function renderAssign() {
+  const t = pl(V.myTarget);
+  $('#assign-target').textContent = t ? t.name : '?';
+  $('#assign-sub').textContent = `Schreib eine Figur auf, die alle kennen. Nur die anderen sehen sie – ${t ? t.name : ''} muss sie erraten.`;
+  $('#assign-done').innerHTML = t && t.figure ? `${icon('check')} ${esc(t.name)} bekommt: <b>${esc(t.figure)}</b>. Du kannst sie noch ändern, bis alle fertig sind.` : '';
+  if (t && t.figure) $('#assign-error').textContent = '';
+  $('#btn-assign').innerHTML = t && t.figure ? icon('refresh') + ' Figur ändern' : icon('check') + ' Figur festlegen';
+  $('#assign-status').innerHTML = V.players.map(p => `<li class="${p.connected ? '' : 'off'}">${avatar(p)}<span>Figur für ${esc(p.name)}</span>
+    <span class="st">${p.hasFigure ? icon('check', 'ok') : icon('hourglass')}</span>${p.connected ? '' : '<span class="muted small">offline</span>'}</li>`).join('');
+  $('#btn-fill').classList.toggle('hidden', !amHost());
+}
+
+const tallyHtml = c => `<span class="t-yes">${icon('check')} ${c.yes}</span><span class="t-no">${icon('cross')} ${c.no}</span><span>${icon('shrug')} ${c.idk}</span>${c.unknown ? `<span>${icon('question')} ${c.unknown}</span>` : ''}`;
+const tallyText = c => [c.yes && `${c.yes}× Ja`, c.no && `${c.no}× Nein`, c.idk && `${c.idk}× weiß nicht`, c.unknown && `${c.unknown}× kenne nicht`].filter(Boolean).join(', ') || 'keine Stimmen';
+const qaList = qs => qs.map(q => `<li class="r-${q.result}">${icon(RESULT_ICON[q.result])} ${esc(q.text)}</li>`).join('');
+function localCount(votes) { const c = { yes: 0, no: 0, idk: 0, unknown: 0 }; Object.values(votes).forEach(v => { if (v in c) c[v]++; }); return c; }
+
+function renderPlay() {
+  const me = meP(), cur = V.currentId, curP = pl(cur);
+  const active = me && !me.solved && !me.gaveUp;
+  const limit = V.settings.limit;
+
+  // Wer ist dran?
+  let b;
+  if (me && me.solved) b = `${icon('party')} Du hast deine Figur erraten! ${curP ? `Jetzt fragt <b>${esc(curP.name)}</b> – hilf beim Antworten.` : ''}`;
+  else if (me && me.gaveUp) b = `${icon('flag')} Du hast aufgegeben. ${curP ? `<b>${esc(curP.name)}</b> ist dran.` : ''}`;
+  else if (cur === V.me) b = icon('target') + ' <b>Du bist dran!</b> Stell eine Ja/Nein-Frage über deine Figur.';
+  else if (curP) b = `${icon('hourglass')} <b>${esc(curP.name)}</b> ist dran.`;
+  else b = icon('idea') + ' Keiner hat mehr Fragen übrig – jetzt wird geraten!';
+  $('#turn-banner').innerHTML = b;
+  $('#turn-banner').classList.toggle('mine', cur === V.me && active);
+
+  // Spielerkarten
+  $('#players-grid').innerHTML = V.players.map(p => {
+    const isMe = p.id === V.me;
+    let fig;
+    if (p.figure) fig = `<div class="fig-name">${esc(p.figure)}</div>`;
+    else if (isMe) fig = `<div class="secret-me" aria-label="Deine Figur ist geheim">${doodleSvg(p.doodle, 'question')}<span class="qmark">?</span></div><div class="fig-hint">Deine Figur – geheim!</div>`;
+    else fig = '<div class="fig-name secret">…</div>';
+    let flip = '';
+    if (isMe && p.figure && (p.solved || p.gaveUp) && !revealed.has(p.id)) { flip = 'flip'; revealed.add(p.id); }
+    const status = p.solved ? `<span class="stamp good">Erraten · Platz ${p.rank} · +${p.roundScore}</span>` : p.gaveUp ? '<span class="stamp">Aufgegeben</span>' : '';
+    return `<article class="pcard ${isMe ? 'me' : ''} ${p.id === cur ? 'current' : ''} ${p.connected ? '' : 'offline'} ${p.solved ? 'solved' : ''} ${flip}" style="${noteStyle(p)}">
+      ${p.id === cur ? '<span class="sticker">am Zug</span>' : ''}
+      <div class="pc-head">${avatar(p)}<div class="pc-name">${esc(p.name)}${isMe ? ' <span class="you">Du</span>' : ''}${p.isHost ? icon('crown', 'crown') : ''}</div></div>
+      ${fig}
+      <div class="pc-foot"><span title="gestellte Fragen">${icon('question')} ${p.qCount}${limit ? '/' + limit : ''}</span>${p.wrong ? `<span title="falsche Tipps">${icon('cross')} ${p.wrong}</span>` : ''}${p.connected ? '' : `<span>${icon('plug')} offline</span>`}</div>
+      ${status}
+      ${p.questions.length && !isMe ? `<details data-pid="${esc(p.id)}" ${openCards.has(p.id) ? 'open' : ''}><summary>Bisherige Fragen (${p.questions.length})</summary><ul class="qa">${qaList(p.questions)}</ul></details>` : ''}
+    </article>`;
+  }).join('');
+
+  // Offene Frage -> abstimmen
+  const pq = V.pendingQ, elQ = $('#pending-q');
+  if (pq) {
+    const asker = pl(pq.askerId), iAsk = pq.askerId === V.me, myVote = pq.votes[V.me];
+    const c = localCount(pq.votes);
+    const waiting = V.players.filter(p => p.id !== pq.askerId && p.connected && !pq.votes[p.id]).map(p => p.name);
+    let h = `<div class="pq-title">${iAsk ? 'Deine Frage' : `<b>${esc(asker ? asker.name : '?')}</b> fragt`}:</div><div class="pq-text">„${esc(pq.text)}“</div>`;
+    if (!iAsk) {
+      if (asker && asker.figure) h += `<div class="muted small">${esc(asker.name)} ist: <b>${esc(asker.figure)}</b></div>`;
+      h += `<div class="vote-row">${['yes', 'no', 'idk', 'unknown'].map(v => `<button class="vbtn v-${v} ${myVote === v ? 'sel' : ''}" data-act="vote" data-v="${v}">${icon(VOTE_ICON[v])}<span>${VOTE_TEXT[v]}</span></button>`).join('')}</div>`;
+    }
+    if (iAsk || myVote) h += `<div class="tally">${tallyHtml(c)}</div>`;
+    else h += '<div class="muted small">Das Ergebnis siehst du, nachdem du abgestimmt hast.</div>';
+    if (waiting.length) h += `<div class="muted small">Warte auf: ${waiting.map(esc).join(', ')}</div>`;
+    if ((iAsk || amHost()) && Object.keys(pq.votes).length && waiting.length) h += `<button class="btn small" data-act="resolve">${icon('skip')} Nicht mehr warten – jetzt auswerten</button>`;
+    elQ.innerHTML = h;
+  }
+  elQ.classList.toggle('hidden', !pq);
+
+  // Knapper Tipp -> die anderen entscheiden
+  const pg = V.pendingG, elG = $('#pending-g');
+  if (pg) {
+    const g = pl(pg.playerId), mine = pg.playerId === V.me, my = pg.votes[V.me];
+    const waiting = V.players.filter(p => p.id !== pg.playerId && p.connected && !pg.votes[p.id]).map(p => p.name);
+    let h = `<div class="pq-title">${icon('search')} ${mine ? 'Dein Tipp' : `<b>${esc(g ? g.name : '?')}</b> tippt`}:</div><div class="pq-text">„${esc(pg.text)}“</div>`;
+    if (mine) h += '<p class="muted">Knapp dran! Die anderen entscheiden gerade, ob dein Tipp zählt …</p>';
+    else h += `<div class="muted small">Gesucht ist: <b>${esc(g && g.figure)}</b> – zählt der Tipp?</div>
+      <div class="vote-row"><button class="vbtn v-yes ${my === 'yes' ? 'sel' : ''}" data-act="gvote" data-v="yes">${icon('check')}<span>Zählt</span></button>
+      <button class="vbtn v-no ${my === 'no' ? 'sel' : ''}" data-act="gvote" data-v="no">${icon('cross')}<span>Zählt nicht</span></button></div>`;
+    if (waiting.length) h += `<div class="muted small">Warte auf: ${waiting.map(esc).join(', ')}</div>`;
+    if (amHost() && Object.keys(pg.votes).length && waiting.length) h += `<button class="btn small" data-act="gresolve">${icon('skip')} Jetzt auswerten</button>`;
+    elG.innerHTML = h;
+  }
+  elG.classList.toggle('hidden', !pg);
+
+  // Frage stellen
+  const canAsk = cur === V.me && active && !pq && !(limit && me.qCount >= limit);
+  const wasHidden = $('#ask-box').classList.contains('hidden');
+  $('#ask-box').classList.toggle('hidden', !canAsk);
+  if (canAsk) {
+    $('#ask-info').textContent = [limit ? `Noch ${limit - me.qCount} Fragen übrig.` : '',
+      V.settings.continueOnYes ? 'Bei „Ja“ darfst du weiterfragen.' : 'Nach jeder Antwort ist der Nächste dran.'].filter(Boolean).join(' ');
+    if (wasHidden && window.matchMedia('(min-width: 861px)').matches) $('#q-input').focus();
+  }
+
+  // Werkzeuge
+  $('#tools').classList.toggle('hidden', !active && !amHost());
+  $('#btn-guess').classList.toggle('hidden', !active);
+  $('#btn-giveup').classList.toggle('hidden', !active);
+  if (!active) $('#guess-box').classList.add('hidden');
+  $('#btn-pass').classList.toggle('hidden', !(cur === V.me && active && !pq));
+  const showSkip = amHost() && cur && cur !== V.me;
+  $('#btn-skip').classList.toggle('hidden', !showSkip);
+  if (showSkip) $('#btn-skip').innerHTML = `${icon('skip')} ${esc(curP.name)} überspringen`;
+  $('#tools-info').textContent = active
+    ? (limit && me.qCount >= limit ? 'Deine Fragen sind aufgebraucht – du kannst jetzt nur noch raten.' : 'Raten geht jederzeit – auch wenn du nicht dran bist. Falsche Tipps kosten 10 Punkte.')
+    : '';
+
+  // Notizen
+  $('#my-notes').innerHTML = me && me.questions.length
+    ? me.questions.map(q => `<li class="r-${q.result}">${icon(RESULT_ICON[q.result])} ${esc(q.text)}</li>`).join('') + (me.wrong ? `<li class="muted">${icon('cross')} ${me.wrong} falsche${me.wrong > 1 ? '' : 'r'} Tipp${me.wrong > 1 ? 's' : ''}</li>` : '')
+    : '<li class="muted">Noch keine Fragen gestellt. Hier siehst du später alle deine Antworten.</li>';
+
+  renderLog();
+}
+
+let lastLogN = -1;
+function renderLog() {
+  const el = $('#log');
+  const lastN = V.log.length ? V.log[V.log.length - 1].n : 0;
+  if (lastN === lastLogN && el.children.length) return;
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  el.innerHTML = V.log.map(logLine).join('');
+  if (atBottom || lastLogN === -1) el.scrollTop = el.scrollHeight;
+  lastLogN = lastN;
+}
+function logLine(e) {
+  const who = `<b>${esc(e.name || '?')}</b>`;
+  switch (e.type) {
+    case 'chat': return `<div class="l chat ${e.author === V.me ? 'mine' : ''}">${who}: ${esc(e.text)}</div>`;
+    case 'q': return `<div class="l q">${icon('question')} ${who} fragt: „${esc(e.text)}“</div>`;
+    case 'ans': return `<div class="l ans r-${e.result}">${icon('arrow')} ${icon(RESULT_ICON[e.result])} ${RESULT_TEXT[e.result]} <span class="muted small">(${tallyText(e.c)})</span></div>`;
+    case 'guess':
+      if (e.verdict === 'right') return `<div class="l guess right">${icon('party')} ${who} tippt „${esc(e.text)}“ – richtig!</div>`;
+      if (e.verdict === 'wrong') return `<div class="l guess wrong">${icon('cross')} ${who} tippt „${esc(e.text)}“ – ${e.afterVote ? 'zählt nicht' : 'falsch'}</div>`;
+      return `<div class="l guess">${icon('search')} ${who} tippt „${esc(e.text)}“ – knapp, die anderen prüfen …</div>`;
+    default: return `<div class="l sys">${e.icon ? icon(e.icon) : ''}<span>${esc(e.text)}</span></div>`;
+  }
+}
+
+function renderEnd() {
+  const medal = r => (r <= 3 ? medalSvg(r) : `<b>${r}.</b>`);
+  const ranked = [...V.players].sort((a, b) => (a.solved ? a.rank : 99) - (b.solved ? b.rank : 99) || b.roundScore - a.roundScore);
+  const top = ranked.filter(p => p.solved).slice(0, 3);
+  const order = top.length === 3 ? [top[1], top[0], top[2]] : top;
+  $('#podium').innerHTML = order.map(p => `<div class="pod p${p.rank}" style="${noteStyle(p)}"><div class="m">${medal(p.rank)}</div>${avatar(p)}<b>${esc(p.name)}</b><div class="pod-fig">${esc(p.figure)}</div><div class="pod-pts">+${p.roundScore}</div></div>`).join('')
+    || '<p class="muted">Diesmal hat niemand seine Figur erraten.</p>';
+  $('#end-round').innerHTML = ranked.map(p => `<li>${avatar(p)}<div><b>${esc(p.name)}</b> war <b>${esc(p.figure || '?')}</b>
+    <div class="muted small">${p.solved ? `${medal(p.rank)} erraten mit ${p.qCount} ${p.qCount === 1 ? 'Frage' : 'Fragen'} · +${p.roundScore}` : p.gaveUp ? icon('flag') + ' aufgegeben · +0' : 'nicht erraten · +0'}</div></div></li>`).join('');
+  $('#end-total').innerHTML = [...V.players].sort((a, b) => b.total - a.total).map(p => `<li>${avatar(p)}<b>${esc(p.name)}</b><span class="pts">${p.total} Pkt.</span></li>`).join('');
+  $('#btn-new-round').classList.toggle('hidden', !amHost());
+  $('#end-wait').innerHTML = amHost() ? 'Neue Runde: alle bleiben im Raum, die Punkte werden weitergezählt.' : icon('hourglass') + ' Warte, bis der Host eine neue Runde startet …';
+}
+
+function renderDoodlePicker(me) {
+  $('#doodle-picker').innerHTML = DOODLES.map(d => `<button class="dpick ${!me.avatar && me.doodle === d.id ? 'sel' : ''}" data-act="doodle" data-id="${d.id}" role="option" aria-selected="${!me.avatar && me.doodle === d.id}" title="${esc(d.name)}">${doodleSvg(d.id, 'happy')}<span>${esc(d.name)}</span></button>`).join('');
+}
+
+/* ---------- Eingaben ---------- */
+// Bild auf 112×112 zuschneiden und verkleinern, damit es schnell an alle geschickt werden kann
+function imageToAvatar(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type)) return reject(new Error('Bitte wähl eine Bilddatei aus (z. B. JPG oder PNG).'));
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const size = 112, c = document.createElement('canvas');
+      c.width = c.height = size;
+      const m = Math.min(img.naturalWidth, img.naturalHeight);
+      c.getContext('2d').drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Das Bild konnte nicht gelesen werden. Versuch ein anderes.')); };
+    img.src = url;
+  });
+}
+function submitAssign() {
+  $('#assign-error').textContent = '';
+  const f = $('#fig-input').value.trim();
+  if (!f) { $('#assign-error').textContent = 'Bitte eine Figur eingeben.'; return; }
+  send({ t: 'assign', figure: f });
+}
+function submitAsk() {
+  const v = $('#q-input').value.trim();
+  if (!v) return;
+  send({ t: 'ask', text: v });
+  $('#q-input').value = '';
+}
+function submitGuess() {
+  const v = $('#guess-input').value.trim();
+  if (!v) return;
+  send({ t: 'guess', text: v });
+  $('#guess-input').value = '';
+  $('#guess-box').classList.add('hidden');
+}
+function submitChat() {
+  const v = $('#chat-input').value.trim();
+  if (!v) return;
+  send({ t: 'chat', text: v });
+  $('#chat-input').value = '';
+}
+function sendSettings(patch) { send({ t: 'settings', s: { ...V.settings, ...patch } }); }
+
+function readName() {
+  const n = cleanName($('#name').value);
+  if (!$('#name').value.trim()) { $('#start-error').textContent = 'Bitte gib zuerst deinen Namen ein.'; $('#name').focus(); return null; }
+  myName = n;
+  store.set(PREFIX + 'name', n);
+  return n;
+}
+
+function bindUI() {
+  const on = (sel, ev, fn) => $(sel).addEventListener(ev, fn);
+  const enter = (sel, fn) => on(sel, 'keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fn(); } });
+
+  on('#btn-create', 'click', () => { if (readName()) { leaving = false; startHost(makeRoomCode(), false); } });
+  const join = () => {
+    if (!readName()) return;
+    const code = $('#code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length !== 5) { $('#start-error').textContent = 'Der Raum-Code hat 5 Zeichen.'; return; }
+    leaving = false; everConnected = false;
+    setUrl(code);
+    startClient(code);
+  };
+  on('#btn-join', 'click', join);
+  enter('#code', join);
+  enter('#name', () => ($('#code').value.trim() ? join() : $('#btn-create').click()));
+
+  on('#btn-copy', 'click', async () => {
+    const link = $('#share-link').value;
+    try { await navigator.clipboard.writeText(link); } catch (e) { $('#share-link').select(); document.execCommand('copy'); }
+    toast('Link kopiert!', 'good', 'copy');
+  });
+  if (navigator.share) {
+    $('#btn-share').classList.remove('hidden');
+    on('#btn-share', 'click', () => navigator.share({ title: 'Wer bin ich?', text: 'Spiel mit mir „Wer bin ich?“!', url: $('#share-link').value }).catch(() => {}));
+  }
+  on('#set-continue', 'change', e => sendSettings({ continueOnYes: e.target.checked }));
+  on('#set-limit', 'change', e => sendSettings({ limit: +e.target.value }));
+  on('#btn-start', 'click', () => send({ t: 'start' }));
+  on('#avatar-file', 'change', async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const data = await imageToAvatar(file);
+      send({ t: 'avatar', data });
+      if (!localMode) store.set(PREFIX + 'avatar', data);
+      toast('Bild gespeichert!', 'good', 'camera');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+  on('#btn-doodle', 'click', () => {
+    const pk = $('#doodle-picker');
+    pk.classList.toggle('hidden');
+    if (!pk.classList.contains('hidden') && V) renderDoodlePicker(meP());
+  });
+  on('#btn-avatar-remove', 'click', () => {
+    send({ t: 'avatar', data: null });
+    if (!localMode) store.del(PREFIX + 'avatar');
+  });
+
+  on('#btn-assign', 'click', submitAssign);
+  enter('#fig-input', submitAssign);
+  on('#btn-fill', 'click', () => askConfirm('Allen, die noch keine Figur haben, eine zufällige Figur geben und das Spiel starten?', 'Ja, starten').then(ok => ok && send({ t: 'fill' })));
+
+  on('#btn-ask', 'click', submitAsk);
+  enter('#q-input', submitAsk);
+  on('#btn-guess', 'click', () => { const b = $('#guess-box'); b.classList.toggle('hidden'); if (!b.classList.contains('hidden')) $('#guess-input').focus(); });
+  on('#btn-guess-send', 'click', submitGuess);
+  enter('#guess-input', submitGuess);
+  on('#btn-pass', 'click', () => send({ t: 'pass' }));
+  on('#btn-giveup', 'click', () => askConfirm('Wirklich aufgeben? Du bekommst dann 0 Punkte in dieser Runde.', icon('flag') + ' Aufgeben').then(ok => ok && send({ t: 'giveup' })));
+  on('#btn-skip', 'click', () => send({ t: 'skip' }));
+  on('#btn-chat', 'click', submitChat);
+  enter('#chat-input', submitChat);
+  on('#btn-new-round', 'click', () => send({ t: 'newRound' }));
+
+  on('#btn-sound', 'click', () => { soundOn = !soundOn; store.set(PREFIX + 'sound', soundOn ? '1' : '0'); $('#btn-sound').innerHTML = icon(soundOn ? 'sound' : 'mute'); if (soundOn) beep(); });
+  $('#btn-sound').innerHTML = icon(soundOn ? 'sound' : 'mute');
+  on('#btn-leave', 'click', () => {
+    const msg = localMode ? 'Testspiel beenden?' : isHost ? 'Raum verlassen? Du bist Host – das Spiel endet dann für alle.' : 'Raum verlassen?';
+    askConfirm(msg, icon('door') + ' Verlassen').then(ok => ok && leaveRoom(false));
+  });
+  on('#btn-test', 'click', () => {
+    $('#online-area').classList.add('hidden');
+    $('#test-setup').classList.remove('hidden');
+    $('#start-error').textContent = '';
+  });
+  on('#btn-test-start', 'click', () => {
+    const names = ['#tn-1', '#tn-2', '#tn-3', '#tn-4'].map(s => clean($(s).value, 20)).filter(Boolean);
+    if (names.length < 2) { $('#start-error').textContent = 'Bitte mindestens 2 Namen eingeben.'; return; }
+    $('#start-error').textContent = '';
+    startLocal(names);
+  });
+  document.addEventListener('keydown', e => {
+    if ($('#modal').classList.contains('hidden')) return;
+    if (e.key === 'Escape') $('#modal-cancel').click();
+  });
+
+  // Dynamische Knöpfe
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-act]');
+    if (!b || b.disabled) return;
+    const act = b.dataset.act;
+    if (act === 'vote') send({ t: 'vote', v: b.dataset.v });
+    else if (act === 'gvote') send({ t: 'gvote', v: b.dataset.v });
+    else if (act === 'view') switchView(b.dataset.id);
+    else if (act === 'doodle') {
+      send({ t: 'doodle', id: b.dataset.id });
+      if (!localMode) { store.set(PREFIX + 'doodle', b.dataset.id); store.del(PREFIX + 'avatar'); }
+    }
+    else if (act === 'resolve') send({ t: 'resolve' });
+    else if (act === 'gresolve') send({ t: 'gresolve' });
+  });
+  document.addEventListener('toggle', e => {
+    const d = e.target;
+    if (d.dataset && d.dataset.pid) { if (d.open) openCards.add(d.dataset.pid); else openCards.delete(d.dataset.pid); }
+  }, true);
+  window.addEventListener('beforeunload', e => { if (isHost && !localMode && S && S.phase !== 'lobby' && !leaving) { e.preventDefault(); e.returnValue = ''; } });
+}
+
+/* ---------- Start ---------- */
+function init() {
+  bindUI();
+  document.querySelectorAll('[data-doodle]').forEach(el => { el.innerHTML = doodleSvg(el.dataset.doodle, el.dataset.mood); });
+  document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); });
+  if (TEST_ONLY) {             // Artefakt-Version: nur Testmodus
+    $('#online-area').classList.add('hidden');
+    $('#test-setup').classList.remove('hidden');
+    $('#test-note').textContent = 'Das ist die Testversion: Alle spielen an diesem Gerät, über die Leiste oben wechselst du zwischen den Ansichten. Online mit Freunden spielst du über die GitHub-Version.';
+    showScreen('start');
+    return;
+  }
+  if (typeof Peer === 'undefined') {
+    showStartError('Die Online-Bibliothek konnte nicht geladen werden. Prüf deine Internetverbindung und lade neu – der Testmodus funktioniert trotzdem.');
+    return;
+  }
+  myName = store.get(PREFIX + 'name') || '';
+  $('#name').value = myName;
+  const code = (new URLSearchParams(location.search).get('raum') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  if (code) {
+    $('#code').value = code;
+    $('#create-area').classList.add('hidden');
+    const saved = loadHostSave(code);
+    if (saved && saved.hostId === myId) {              // Host hat die Seite neu geladen
+      S = saved;
+      const me = S.players.find(p => p.id === myId);
+      if (me) myName = me.name;
+      startHost(code, true);
+      return;
+    }
+    const rejoinName = store.get(PREFIX + 'joined-' + code, true);
+    if (rejoinName) { myName = rejoinName; startClient(code); return; }  // Mitspieler hat neu geladen
+    setStatus('Gib deinen Namen ein und tritt dem Raum bei.');
+    $('#name').focus();
+  }
+  showScreen('start');
+}
+init();
+
+  </script>
+</body>
+</html>
