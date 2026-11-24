@@ -472,6 +472,34 @@ h3 .ic { width: 1.1em; height: 1.1em; color: var(--accent); }
   .hnote.n2 { width: 98px; height: 92px; font-size: 3rem; }
 }
 
+/* ---------- Fragen-Modus (Lobby) ---------- */
+.seg { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg button {
+  flex: 1; min-width: 140px; font: inherit; font-weight: 800; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 12px; border-radius: 12px;
+  border: 2px solid var(--panel-line); background: var(--field); color: var(--ink);
+}
+.seg button.active { border-color: var(--ink); background: #ffe066; color: #2b2118; box-shadow: 0 3px 0 var(--ink); }
+.seg button:disabled { cursor: default; }
+.seg button:disabled:not(.active) { opacity: .55; }
+
+/* ---------- Countdown ---------- */
+.countdown { position: fixed; inset: 0; z-index: 65; display: grid; place-items: center; background: var(--overlay); }
+.cd-num {
+  font-family: var(--f-hand); font-size: clamp(6rem, 30vw, 12rem); line-height: 1;
+  background: #ffe066; color: #2b2118; border-radius: 6px 6px 40px 6px;
+  min-width: 1.6em; padding: .15em .3em; text-align: center;
+  box-shadow: 0 24px 30px -12px rgba(0, 0, 0, .6);
+  animation: cdpop .9s cubic-bezier(.2, 1.6, .4, 1) both;
+}
+.cd-num.go { background: #8ce99a; font-size: clamp(4.5rem, 22vw, 9rem); }
+@keyframes cdpop {
+  0% { transform: scale(.3) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.05) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-3deg); }
+}
+
 </style>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
@@ -586,7 +614,12 @@ h3 .ic { width: 1.1em; height: 1.1em; color: var(--accent); }
         <div class="card" id="settings-card">
           <h3>Einstellungen <span id="settings-note" class="muted small"></span></h3>
           <p class="muted small"><i class="ic-slot" data-icon="pencil"></i> Jeder schreibt für einen Mitspieler eine geheime Figur auf.</p>
-          <label class="check"><input type="checkbox" id="set-continue"> Bei „Ja“ darf man weiterfragen</label>
+          <label>Fragen-Modus</label>
+          <div class="seg" id="set-turnmode">
+            <button data-act="turnmode" data-v="one"><i class="ic-slot" data-icon="arrow"></i> 1 Frage pro Zug</button>
+            <button data-act="turnmode" data-v="yes"><i class="ic-slot" data-icon="refresh"></i> Bei „Ja“ nochmal</button>
+          </div>
+          <p class="muted small" id="turnmode-desc"></p>
           <label for="set-limit">Fragen-Limit pro Spieler</label>
           <select id="set-limit">
             <option value="0">Kein Limit</option>
@@ -689,6 +722,7 @@ h3 .ic { width: 1.1em; height: 1.1em; color: var(--accent); }
     </section>
   </main>
 
+  <div id="countdown" class="countdown hidden" aria-live="assertive"></div>
   <div id="toasts"></div>
   <div id="confetti"></div>
   <script>
@@ -965,7 +999,7 @@ const RESULT_TEXT = { yes: 'Ja', no: 'Nein', unclear: 'Unklar' };
 const RESULT_ICON = { yes: 'check', no: 'cross', unclear: 'shrug' };
 const VOTE_TEXT = { yes: 'Ja', no: 'Nein', idk: 'Weiß nicht', unknown: 'Kenne ich nicht' };
 const VOTE_ICON = { yes: 'check', no: 'cross', idk: 'shrug', unknown: 'question' };
-const SETTINGS_DEFAULT = { continueOnYes: true, limit: 0 };
+const SETTINGS_DEFAULT = { continueOnYes: false, limit: 0 };   // false = 1 Frage pro Zug, true = bei „Ja“ nochmal
 // In der Claude-Artefakt-Version gibt es nur den Testmodus (dort ist WebRTC gesperrt)
 const TEST_ONLY = !!window.WBI_TEST_ONLY;
 let localMode = false;       // Testmodus: alle Spieler an einem Gerät
@@ -1123,9 +1157,7 @@ function resolveQ() {
   addLog('ans', null, a.id, { result, c });
   S.pendingQ = null;
   if (result === 'yes' && S.settings.continueOnYes) {
-    if (!limitReached(a)) addLog('sys', `${a.name} darf weiterfragen.`, null, { icon: 'arrow' });
-  } else if (result === 'unclear') {
-    if (!limitReached(a)) addLog('sys', `Unklare Antwort – ${a.name} darf die Frage anders stellen.`, null, { icon: 'shrug' });
+    if (!limitReached(a)) addLog('sys', `Ja! ${a.name} ist nochmal dran.`, null, { icon: 'arrow' });
   } else {
     nextTurn();
     const now = currentId();
@@ -1176,6 +1208,21 @@ function startPlay() {
   S.turn = -1;
   nextTurn();
   addLog('sys', `Los geht's! ${currentId() ? P(currentId()).name + ' beginnt.' : ''}`, null, { icon: 'dice' });
+  startCountdown();
+}
+// Countdown 3-2-1-Los: läuft beim Host und wird an alle geschickt, damit er überall gleich ist
+let countdownTimer = null;
+function startCountdown() {
+  clearTimeout(countdownTimer);
+  S.countdown = 3;
+  const step = () => {
+    countdownTimer = setTimeout(() => {
+      if (!S || S.phase !== 'play' || S.countdown == null) return;
+      if (S.countdown > 0) { S.countdown--; commit(); step(); }
+      else { S.countdown = null; commit(); }
+    }, S.countdown > 0 ? 1000 : 800);
+  };
+  step();
 }
 function fillRandom() {
   const used = new Set(S.players.filter(p => p.figure).map(p => norm(p.figure)));
@@ -1217,6 +1264,7 @@ function hostHandle(id, msg) {
   const err = (m, extra = {}) => sendTo(id, { t: 'error', msg: m, ...extra });
   const isH = id === S.hostId || localMode;
   const play = S.phase === 'play';
+  if (S.countdown != null && ['ask', 'vote', 'resolve', 'guess', 'gvote', 'gresolve', 'pass', 'skip', 'giveup'].includes(msg.t)) return;
 
   switch (msg.t) {
     case 'ping': return;
@@ -1402,6 +1450,7 @@ function view(R) {
       questions: p.questions.map(q => ({ text: cen(q.text, p.id), result: q.result, c: q.c }))
     })),
     pendingQ: S.pendingQ ? { n: S.pendingQ.n, askerId: S.pendingQ.askerId, text: cen(S.pendingQ.text, S.pendingQ.askerId), votes: S.pendingQ.votes } : null,
+    countdown: S.phase === 'play' && S.countdown != null ? S.countdown : null,
     pendingG: S.pendingG ? { n: S.pendingG.n, playerId: S.pendingG.playerId, text: cen(S.pendingG.text, S.pendingG.playerId), votes: S.pendingG.votes } : null,
     log: S.log.slice(-150).map(e => ({ ...e, text: cen(e.text, e.author) }))
   };
@@ -1492,7 +1541,7 @@ function startHost(code, resume, tries = 0) {
   peer.on('open', () => {
     setConn(true);
     if (!resume) hostCreate(code, myName);
-    else S.players.forEach(p => { p.connected = p.id === myId; });
+    else { S.players.forEach(p => { p.connected = p.id === myId; }); S.countdown = null; }
     setUrl(code);
     store.set(PREFIX + 'joined-' + code, myName, true);
     commit();
@@ -1775,6 +1824,7 @@ function render() {
   else if (V.phase === 'assign') renderAssign();
   else if (V.phase === 'play') renderPlay();
   else if (V.phase === 'end') renderEnd();
+  renderCountdown();
 }
 
 function renderLobby() {
@@ -1796,7 +1846,10 @@ function renderLobby() {
   const h = amHost(), s = V.settings;
   $('#settings-card').classList.toggle('readonly', !h);
   $('#settings-note').textContent = h ? '' : '(legt der Host fest)';
-  $('#set-continue').checked = s.continueOnYes; $('#set-continue').disabled = !h;
+  document.querySelectorAll('#set-turnmode button').forEach(b => { b.classList.toggle('active', (b.dataset.v === 'yes') === !!s.continueOnYes); b.disabled = !h; });
+  $('#turnmode-desc').textContent = s.continueOnYes
+    ? 'Wer ein „Ja“ bekommt, darf gleich nochmal fragen. Bei „Nein“ oder „Unklar“ ist der Nächste dran.'
+    : 'Jeder stellt genau eine Frage, dann ist der Nächste dran – immer reihum.';
   $('#set-limit').value = String(s.limit); $('#set-limit').disabled = !h;
   const online = V.players.filter(p => p.connected).length;
   $('#btn-start').classList.toggle('hidden', !h);
@@ -1894,12 +1947,12 @@ function renderPlay() {
   elG.classList.toggle('hidden', !pg);
 
   // Frage stellen
-  const canAsk = cur === V.me && active && !pq && !(limit && me.qCount >= limit);
+  const canAsk = cur === V.me && active && !pq && !(limit && me.qCount >= limit) && V.countdown == null;
   const wasHidden = $('#ask-box').classList.contains('hidden');
   $('#ask-box').classList.toggle('hidden', !canAsk);
   if (canAsk) {
     $('#ask-info').textContent = [limit ? `Noch ${limit - me.qCount} Fragen übrig.` : '',
-      V.settings.continueOnYes ? 'Bei „Ja“ darfst du weiterfragen.' : 'Nach jeder Antwort ist der Nächste dran.'].filter(Boolean).join(' ');
+      V.settings.continueOnYes ? 'Bei „Ja“ bist du nochmal dran.' : 'Nach deiner Frage ist der Nächste dran.'].filter(Boolean).join(' ');
     if (wasHidden && window.matchMedia('(min-width: 861px)').matches) $('#q-input').focus();
   }
 
@@ -1964,6 +2017,18 @@ function renderEnd() {
 
 function renderDoodlePicker(me) {
   $('#doodle-picker').innerHTML = DOODLES.map(d => `<button class="dpick ${!me.avatar && me.doodle === d.id ? 'sel' : ''}" data-act="doodle" data-id="${d.id}" role="option" aria-selected="${!me.avatar && me.doodle === d.id}" title="${esc(d.name)}">${doodleSvg(d.id, 'happy')}<span>${esc(d.name)}</span></button>`).join('');
+}
+
+let lastCd = null;
+function renderCountdown() {
+  const cd = V && V.phase === 'play' ? V.countdown : null;
+  const el = $('#countdown');
+  el.classList.toggle('hidden', cd == null);
+  if (cd != null && cd !== lastCd) {
+    el.innerHTML = `<span class="cd-num ${cd === 0 ? 'go' : ''}">${cd === 0 ? 'Los!' : cd}</span>`;
+    beep(cd === 0 ? 880 : 520, cd === 0 ? .25 : .12);
+  }
+  lastCd = cd;
 }
 
 /* ---------- Eingaben ---------- */
@@ -2046,7 +2111,6 @@ function bindUI() {
     $('#btn-share').classList.remove('hidden');
     on('#btn-share', 'click', () => navigator.share({ title: 'Wer bin ich?', text: 'Spiel mit mir „Wer bin ich?“!', url: $('#share-link').value }).catch(() => {}));
   }
-  on('#set-continue', 'change', e => sendSettings({ continueOnYes: e.target.checked }));
   on('#set-limit', 'change', e => sendSettings({ limit: +e.target.value }));
   on('#btn-start', 'click', () => send({ t: 'start' }));
   on('#avatar-file', 'change', async e => {
@@ -2116,6 +2180,7 @@ function bindUI() {
     if (act === 'vote') send({ t: 'vote', v: b.dataset.v });
     else if (act === 'gvote') send({ t: 'gvote', v: b.dataset.v });
     else if (act === 'view') switchView(b.dataset.id);
+    else if (act === 'turnmode') { if (amHost()) sendSettings({ continueOnYes: b.dataset.v === 'yes' }); }
     else if (act === 'doodle') {
       send({ t: 'doodle', id: b.dataset.id });
       if (!localMode) { store.set(PREFIX + 'doodle', b.dataset.id); store.del(PREFIX + 'avatar'); }
