@@ -1337,8 +1337,7 @@ function hostHandle(id, msg) {
       if (letterCount(text) < 1) return err('Bitte einen Tipp eingeben.');
       const r = matchGuess(text, p.figure, p.aliases);
       if (r === 'yes') { addLog('guess', text, id, { verdict: 'right' }); solve(p); }
-      else if (r === 'no') wrongGuess(p, text);
-      else {
+      else {   // nicht genau gleich -> die anderen stimmen ab, ob der Tipp zählt
         S.pendingG = { n: ++S.seq, playerId: id, text, votes: {} };
         addLog('guess', text, id, { verdict: 'check' });
       }
@@ -1936,7 +1935,7 @@ function renderPlay() {
     const g = pl(pg.playerId), mine = pg.playerId === V.me, my = pg.votes[V.me];
     const waiting = V.players.filter(p => p.id !== pg.playerId && p.connected && !pg.votes[p.id]).map(p => p.name);
     let h = `<div class="pq-title">${icon('search')} ${mine ? 'Dein Tipp' : `<b>${esc(g ? g.name : '?')}</b> tippt`}:</div><div class="pq-text">„${esc(pg.text)}“</div>`;
-    if (mine) h += '<p class="muted">Knapp dran! Die anderen entscheiden gerade, ob dein Tipp zählt …</p>';
+    if (mine) h += '<p class="muted">Die anderen entscheiden gerade, ob dein Tipp zählt …</p>';
     else h += `<div class="muted small">Gesucht ist: <b>${esc(g && g.figure)}</b> – zählt der Tipp?</div>
       <div class="vote-row"><button class="vbtn v-yes ${my === 'yes' ? 'sel' : ''}" data-act="gvote" data-v="yes">${icon('check')}<span>Zählt</span></button>
       <button class="vbtn v-no ${my === 'no' ? 'sel' : ''}" data-act="gvote" data-v="no">${icon('cross')}<span>Zählt nicht</span></button></div>`;
@@ -1996,7 +1995,7 @@ function logLine(e) {
     case 'guess':
       if (e.verdict === 'right') return `<div class="l guess right">${icon('party')} ${who} tippt „${esc(e.text)}“ – richtig!</div>`;
       if (e.verdict === 'wrong') return `<div class="l guess wrong">${icon('cross')} ${who} tippt „${esc(e.text)}“ – ${e.afterVote ? 'zählt nicht' : 'falsch'}</div>`;
-      return `<div class="l guess">${icon('search')} ${who} tippt „${esc(e.text)}“ – knapp, die anderen prüfen …</div>`;
+      return `<div class="l guess">${icon('search')} ${who} tippt „${esc(e.text)}“ – die anderen stimmen ab …</div>`;
     default: return `<div class="l sys">${e.icon ? icon(e.icon) : ''}<span>${esc(e.text)}</span></div>`;
   }
 }
