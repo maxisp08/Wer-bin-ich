@@ -371,7 +371,7 @@ h3 .ic { width: 1.1em; height: 1.1em; color: var(--accent); }
 .pending.guess { border-style: dashed; }
 .pq-title { color: var(--ink-soft); font-weight: 700; }
 .pq-text { font-family: var(--f-display); font-weight: 800; font-size: clamp(1.4rem, 4vw, 1.9rem); line-height: 1.2; margin: 4px 0 10px; word-break: break-word; }
-.vote-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 14px 0; }
+.vote-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; margin: 14px 0; }
 .vbtn {
   font: inherit; font-weight: 800; font-size: 1.05rem; padding: 14px 10px; border-radius: 14px; cursor: pointer;
   border: 2.5px solid var(--ink); color: #fff; box-shadow: 0 5px 0 var(--ink);
@@ -499,6 +499,12 @@ h3 .ic { width: 1.1em; height: 1.1em; color: var(--accent); }
   60% { transform: scale(1.05) rotate(4deg); opacity: 1; }
   100% { transform: scale(1) rotate(-3deg); }
 }
+
+/* ---------- Jain ---------- */
+.v-jain { background: #e8590c; }
+.t-jain { color: #e8590c; }
+.r-jain .ic, .qa .r-jain .ic { color: #e8590c; }
+.l.ans.r-jain { color: #e8590c; }
 
 </style>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -946,6 +952,7 @@ const FIGURE_CATEGORIES = [
     rocket: p('M12 2.5c4 2.5 5.5 6.5 5 11l-2.5 2.5h-5L7 13.5c-.5-4.5 1-8.5 5-11z M9.5 16l-2.5 4.5 M14.5 16l2.5 4.5 M12 16v5') + c(12, 9, 1.8),
     check: p('M4 12.5l5 5L20 6'),
     cross: p('M6 6l12 12 M18 6L6 18'),
+    jain: p('M2.5 12.5l3 3L11 9 M14.5 9l6 6 M20.5 9l-6 6'),
     dice: p('M4.5 8A3.5 3.5 0 0 1 8 4.5h8A3.5 3.5 0 0 1 19.5 8v8a3.5 3.5 0 0 1-3.5 3.5H8A3.5 3.5 0 0 1 4.5 16z') + c(9, 9, 1.4, true) + c(15, 15, 1.4, true) + c(12, 12, 1.4, true),
     idea: p('M9.5 17.5h5 M10.5 21h3 M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1v1.5h5V16c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z'),
     skip: p('M5 5.5l8 6.5-8 6.5z M18.5 5.5v13'),
@@ -995,10 +1002,10 @@ const PREFIX = 'werbinich-v1-';
 const MAX_PLAYERS = 12;
 const STOPWORDS = new Set(['prinzessin', 'captain', 'koenig', 'könig', 'königin', 'black', 'wonder', 'queen',
   'donkey', 'master', 'chief', 'lucky', 'peter', 'thomas', 'wolfgang', 'sendung']);
-const RESULT_TEXT = { yes: 'Ja', no: 'Nein', unclear: 'Unklar' };
-const RESULT_ICON = { yes: 'check', no: 'cross', unclear: 'shrug' };
-const VOTE_TEXT = { yes: 'Ja', no: 'Nein', idk: 'Weiß nicht', unknown: 'Kenne ich nicht' };
-const VOTE_ICON = { yes: 'check', no: 'cross', idk: 'shrug', unknown: 'question' };
+const RESULT_TEXT = { yes: 'Ja', jain: 'Jain', no: 'Nein', unclear: 'Unklar' };
+const RESULT_ICON = { yes: 'check', jain: 'jain', no: 'cross', unclear: 'shrug' };
+const VOTE_TEXT = { yes: 'Ja', jain: 'Jain', no: 'Nein', idk: 'Weiß nicht', unknown: 'Kenne ich nicht' };
+const VOTE_ICON = { yes: 'check', jain: 'jain', no: 'cross', idk: 'shrug', unknown: 'question' };
 const SETTINGS_DEFAULT = { continueOnYes: false, limit: 0 };   // false = 1 Frage pro Zug, true = bei „Ja“ nochmal
 // In der Claude-Artefakt-Version gibt es nur den Testmodus (dort ist WebRTC gesperrt)
 const TEST_ONLY = !!window.WBI_TEST_ONLY;
@@ -1142,7 +1149,7 @@ function fixTurn() {
 const voters = excl => S.players.filter(p => p.id !== excl && p.connected);
 const allVoted = (pend, excl) => voters(excl).every(p => pend.votes[p.id]);
 function countVotes(votes) {
-  const c = { yes: 0, no: 0, idk: 0, unknown: 0 };
+  const c = { yes: 0, jain: 0, no: 0, idk: 0, unknown: 0 };
   Object.values(votes).forEach(v => { if (v in c) c[v]++; });
   return c;
 }
@@ -1151,13 +1158,14 @@ function resolveQ() {
   const q = S.pendingQ, a = P(q.askerId);
   const c = countVotes(q.votes);
   let result = 'unclear';
-  if (c.yes > c.no && c.yes >= c.idk) result = 'yes';
-  else if (c.no > c.yes && c.no >= c.idk) result = 'no';
+  const yesSide = c.yes + c.jain;   // „Jain“ zählt auf der Ja-Seite
+  if (yesSide > c.no && yesSide >= c.idk) result = c.jain > c.yes ? 'jain' : 'yes';
+  else if (c.no > yesSide && c.no >= c.idk) result = 'no';
   a.questions.push({ text: q.text, result, c });
   addLog('ans', null, a.id, { result, c });
   S.pendingQ = null;
-  if (result === 'yes' && S.settings.continueOnYes) {
-    if (!limitReached(a)) addLog('sys', `Ja! ${a.name} ist nochmal dran.`, null, { icon: 'arrow' });
+  if ((result === 'yes' || result === 'jain') && S.settings.continueOnYes) {
+    if (!limitReached(a)) addLog('sys', `${RESULT_TEXT[result]}! ${a.name} ist nochmal dran.`, null, { icon: 'arrow' });
   } else {
     nextTurn();
     const now = currentId();
@@ -1318,7 +1326,7 @@ function hostHandle(id, msg) {
 
     case 'vote':
       if (!play || !S.pendingQ || S.pendingQ.askerId === id) return;
-      if (!['yes', 'no', 'idk', 'unknown'].includes(msg.v)) return;
+      if (!['yes', 'jain', 'no', 'idk', 'unknown'].includes(msg.v)) return;
       S.pendingQ.votes[id] = msg.v;
       break;
 
@@ -1847,7 +1855,7 @@ function renderLobby() {
   $('#settings-note').textContent = h ? '' : '(legt der Host fest)';
   document.querySelectorAll('#set-turnmode button').forEach(b => { b.classList.toggle('active', (b.dataset.v === 'yes') === !!s.continueOnYes); b.disabled = !h; });
   $('#turnmode-desc').textContent = s.continueOnYes
-    ? 'Wer ein „Ja“ bekommt, darf gleich nochmal fragen. Bei „Nein“ oder „Unklar“ ist der Nächste dran.'
+    ? 'Wer ein „Ja“ oder „Jain“ bekommt, darf gleich nochmal fragen. Bei „Nein“ oder „Unklar“ ist der Nächste dran.'
     : 'Jeder stellt genau eine Frage, dann ist der Nächste dran – immer reihum.';
   $('#set-limit').value = String(s.limit); $('#set-limit').disabled = !h;
   const online = V.players.filter(p => p.connected).length;
@@ -1870,10 +1878,10 @@ function renderAssign() {
   $('#btn-fill').classList.toggle('hidden', !amHost());
 }
 
-const tallyHtml = c => `<span class="t-yes">${icon('check')} ${c.yes}</span><span class="t-no">${icon('cross')} ${c.no}</span><span>${icon('shrug')} ${c.idk}</span>${c.unknown ? `<span>${icon('question')} ${c.unknown}</span>` : ''}`;
-const tallyText = c => [c.yes && `${c.yes}× Ja`, c.no && `${c.no}× Nein`, c.idk && `${c.idk}× weiß nicht`, c.unknown && `${c.unknown}× kenne nicht`].filter(Boolean).join(', ') || 'keine Stimmen';
+const tallyHtml = c => `<span class="t-yes">${icon('check')} ${c.yes}</span><span class="t-jain">${icon('jain')} ${c.jain}</span><span class="t-no">${icon('cross')} ${c.no}</span><span>${icon('shrug')} ${c.idk}</span>${c.unknown ? `<span>${icon('question')} ${c.unknown}</span>` : ''}`;
+const tallyText = c => [c.yes && `${c.yes}× Ja`, c.jain && `${c.jain}× Jain`, c.no && `${c.no}× Nein`, c.idk && `${c.idk}× weiß nicht`, c.unknown && `${c.unknown}× kenne nicht`].filter(Boolean).join(', ') || 'keine Stimmen';
 const qaList = qs => qs.map(q => `<li class="r-${q.result}">${icon(RESULT_ICON[q.result])} ${esc(q.text)}</li>`).join('');
-function localCount(votes) { const c = { yes: 0, no: 0, idk: 0, unknown: 0 }; Object.values(votes).forEach(v => { if (v in c) c[v]++; }); return c; }
+function localCount(votes) { const c = { yes: 0, jain: 0, no: 0, idk: 0, unknown: 0 }; Object.values(votes).forEach(v => { if (v in c) c[v]++; }); return c; }
 
 function renderPlay() {
   const me = meP(), cur = V.currentId, curP = pl(cur);
@@ -1919,7 +1927,7 @@ function renderPlay() {
     let h = `<div class="pq-title">${iAsk ? 'Deine Frage' : `<b>${esc(asker ? asker.name : '?')}</b> fragt`}:</div><div class="pq-text">„${esc(pq.text)}“</div>`;
     if (!iAsk) {
       if (asker && asker.figure) h += `<div class="muted small">${esc(asker.name)} ist: <b>${esc(asker.figure)}</b></div>`;
-      h += `<div class="vote-row">${['yes', 'no', 'idk', 'unknown'].map(v => `<button class="vbtn v-${v} ${myVote === v ? 'sel' : ''}" data-act="vote" data-v="${v}">${icon(VOTE_ICON[v])}<span>${VOTE_TEXT[v]}</span></button>`).join('')}</div>`;
+      h += `<div class="vote-row">${['yes', 'jain', 'no', 'idk', 'unknown'].map(v => `<button class="vbtn v-${v} ${myVote === v ? 'sel' : ''}" data-act="vote" data-v="${v}">${icon(VOTE_ICON[v])}<span>${VOTE_TEXT[v]}</span></button>`).join('')}</div>`;
     }
     if (iAsk || myVote) h += `<div class="tally">${tallyHtml(c)}</div>`;
     else h += '<div class="muted small">Das Ergebnis siehst du, nachdem du abgestimmt hast.</div>';
